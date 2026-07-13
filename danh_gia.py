@@ -27,7 +27,7 @@ try:
     df_long = df_raw.melt(id_vars=[df_raw.columns[0]], var_name='Thành viên', value_name='Điểm')
     df_long['Điểm'] = pd.to_numeric(df_long['Điểm'], errors='coerce').fillna(0)
 
-    # Hàm vẽ biểu đồ (Cấu hình chuẩn, ổn định)
+    # Hàm vẽ biểu đồ
     def chart(rows, color):
         data = df_long[df_long[df_raw.columns[0]].isin(rows)].groupby('Thành viên', as_index=False)['Điểm'].sum()
         
@@ -40,18 +40,18 @@ try:
 
     cows = df_raw.iloc[:, 0].tolist()
 
-    # Hiển thị các mục
+    # Hiển thị các mục (Note nằm dưới tiêu đề)
     st.subheader("1️⃣ Tiêu chí 1")
+    st.caption(f"**Nội dung:** {cows[0]}")
     chart([cows[0]], '#3498db')
-    st.caption(f"Note: {cows[0]}")
     
     st.subheader("2️⃣ Tiêu chí 2")
+    st.caption(f"**Nội dung:** {cows[1]}")
     chart([cows[1]], '#3498db')
-    st.caption(f"Note: {cows[1]}")
     
     st.subheader("3️⃣ Tiêu chí tiêu cực")
+    st.caption(f"**Nội dung:** {cows[2]} & {cows[3]}")
     chart([cows[2], cows[3]], '#e74c3c')
-    st.caption(f"Note: {cows[2]} & {cows[3]}")
 
     # Bảng chi tiết
     with st.expander("📋 Số liệu chi tiết"):
