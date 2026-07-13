@@ -3,7 +3,7 @@ import pandas as pd
 import altair as alt
 
 st.set_page_config(layout="wide")
-st.title("📊 Bảng Theo dõi & Đánh giá Thành viên")
+st.title("📊 Hệ thống Đánh giá Hiệu suất Horizon")
 
 file_name = "Du_Lieu_Danh_Gia.xlsx"
 
@@ -27,29 +27,38 @@ try:
     st.header(f"📌 Tuần: {selected_sheet}")
     st.write("---")
 
-    # Hàm vẽ biểu đồ với trục Y định dạng số nguyên
-    def ve_bieu_do_altair(cau_hoi, mau_sac):
+    # Hàm vẽ biểu đồ thường (Câu 1, 2)
+    def ve_bieu_do_don(cau_hoi, mau_sac):
         df_plot = df_long[df_long[col_cau_hoi] == cau_hoi]
-        
-        # Thêm format="d" vào trục Y để ép hiển thị số nguyên
         chart = alt.Chart(df_plot).mark_bar(color=mau_sac).encode(
             x=alt.X('Thành viên:N', sort=danh_sach_thanh_vien, axis=alt.Axis(labelAngle=0)),
             y=alt.Y('Điểm:Q', axis=alt.Axis(format="d")) 
-        ).properties(
-            width=1000, 
-            height=300
-        ).interactive()
+        ).properties(width=1000, height=300).interactive()
         
         st.subheader(f"Tiêu chí: {cau_hoi}")
         st.altair_chart(chart, use_container_width=False)
 
+    # Hàm vẽ biểu đồ gộp (Câu 3 + 4)
+    def ve_bieu_do_gop(cau_hoi_3, cau_hoi_4):
+        df_plot = df_long[df_long[col_cau_hoi].isin([cau_hoi_3, cau_hoi_4])]
+        
+        chart = alt.Chart(df_plot).mark_bar().encode(
+            x=alt.X('Thành viên:N', sort=danh_sach_thanh_vien, axis=alt.Axis(labelAngle=0)),
+            y=alt.Y('Điểm:Q', axis=alt.Axis(format="d")),
+            color=alt.Color(f'{col_cau_hoi}:N', scale=alt.Scale(scheme='set1')), # Tự đổi màu
+            column=f'{col_cau_hoi}:N' # Tách cột theo tên câu hỏi
+        ).properties(width=450, height=300).interactive()
+        
+        st.subheader("3️⃣ & 4️⃣ Tiêu chí tiêu cực")
+        st.warning(f"⚠️ {cau_hoi_3} & {cau_hoi_4}")
+        st.altair_chart(chart, use_container_width=False)
+
     danh_sach_cau = df_raw[col_cau_hoi].tolist()
 
-    # Vẽ biểu đồ
-    ve_bieu_do_altair(danh_sach_cau[0], '#3498db') # Câu 1
-    ve_bieu_do_altair(danh_sach_cau[1], '#3498db') # Câu 2
-    ve_bieu_do_altair(danh_sach_cau[2], '#e74c3c') # Câu 3
-    ve_bieu_do_altair(danh_sach_cau[3], '#e74c3c') # Câu 4
+    # Hiển thị
+    ve_bieu_do_don(danh_sach_cau[0], '#3498db') # Câu 1
+    ve_bieu_do_don(danh_sach_cau[1], '#3498db') # Câu 2
+    ve_bieu_do_gop(danh_sach_cau[2], danh_sach_cau[3]) # Gộp 3 & 4
 
     st.write("---")
     with st.expander("📋 Xem Bảng Số Liệu Chi Tiết"):
