@@ -38,16 +38,17 @@ try:
         st.subheader(f"Tiêu chí: {cau_hoi}")
         st.altair_chart(chart, use_container_width=False)
 
-    # Hàm vẽ biểu đồ gộp (Câu 3 + 4)
-    def ve_bieu_do_gop(cau_hoi_3, cau_hoi_4):
+    # Hàm vẽ biểu đồ GỘP Câu 3 & 4 (trên cùng 1 biểu đồ)
+    def ve_bieu_do_gop_chung(cau_hoi_3, cau_hoi_4):
         df_plot = df_long[df_long[col_cau_hoi].isin([cau_hoi_3, cau_hoi_4])]
         
+        # Dùng barmode='group' bằng cách đặt Câu hỏi vào thuộc tính color
         chart = alt.Chart(df_plot).mark_bar().encode(
             x=alt.X('Thành viên:N', sort=danh_sach_thanh_vien, axis=alt.Axis(labelAngle=0)),
             y=alt.Y('Điểm:Q', axis=alt.Axis(format="d")),
-            color=alt.Color(f'{col_cau_hoi}:N', scale=alt.Scale(scheme='set1')), # Tự đổi màu
-            column=f'{col_cau_hoi}:N' # Tách cột theo tên câu hỏi
-        ).properties(width=450, height=300).interactive()
+            color=alt.Color(f'{col_cau_hoi}:N', scale=alt.Scale(scheme='reds')), # Màu đỏ cho tiêu cực
+            xOffset=alt.X(f'{col_cau_hoi}:N') # Tách cột cạnh nhau
+        ).properties(width=1000, height=300).interactive()
         
         st.subheader("3️⃣ & 4️⃣ Tiêu chí tiêu cực")
         st.warning(f"⚠️ {cau_hoi_3} & {cau_hoi_4}")
@@ -58,7 +59,7 @@ try:
     # Hiển thị
     ve_bieu_do_don(danh_sach_cau[0], '#3498db') # Câu 1
     ve_bieu_do_don(danh_sach_cau[1], '#3498db') # Câu 2
-    ve_bieu_do_gop(danh_sach_cau[2], danh_sach_cau[3]) # Gộp 3 & 4
+    ve_bieu_do_gop_chung(danh_sach_cau[2], danh_sach_cau[3]) # Gộp chung Câu 3 & 4
 
     st.write("---")
     with st.expander("📋 Xem Bảng Số Liệu Chi Tiết"):
