@@ -4,7 +4,7 @@ import altair as alt
 
 # Cấu hình giao diện
 st.set_page_config(layout="wide")
-st.title("📊 Hệ thống Đánh giá Thành viên")
+st.title("📊 Hệ thống Theo dõi & Đánh giá Thành viên")
 
 # Link GitHub
 file_url = "https://github.com/nmh21102003-a11y/web-danh-gia-du-an/raw/refs/heads/main/Du_Lieu_Danh_Gia.xlsx"
