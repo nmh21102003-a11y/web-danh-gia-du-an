@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import altair as alt
 
 st.set_page_config(layout="wide")
 st.title("📊 Bảng Đánh Giá Tổng Hợp")
@@ -8,40 +7,34 @@ st.title("📊 Bảng Đánh Giá Tổng Hợp")
 file_name = "Du_Lieu_Danh_Gia.xlsx"
 
 @st.cache_data
-def load_all_sheets():
-    return pd.read_excel(file_name, sheet_name=None)
+def load_data():
+    # Đọc file, bỏ qua 2 dòng đầu nếu cần (dựa trên cấu trúc file của bạn)
+    df = pd.read_excel(file_name, sheet_name=None)
+    return df
 
 try:
-    all_sheets = load_all_sheets()
-    sheet_names = list(all_sheets.keys())
-    selected_sheet = st.sidebar.selectbox("Chọn Tuần:", sheet_names)
-    
+    all_sheets = load_data()
+    selected_sheet = st.sidebar.selectbox("Chọn Tuần:", list(all_sheets.keys()))
     df = all_sheets[selected_sheet]
-    df.columns = df.columns.astype(str).str.strip()
+
+    # --- DỌN DỮ LIỆU ---
+    # 1. Bỏ tất cả cột có tên 'Unnamed'
+    df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
     
-    # Ép kiểu dữ liệu để tránh lỗi 'ArrowTypeError'
-    # Chúng ta chuyển tất cả các cột điểm về dạng số, nếu lỗi thì biến thành 0
-    for col in df.columns:
-        if 'Điểm' in col or 'Câu' in col:
-            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+    # 2. Tìm cột tên thành viên (cột đầu tiên thường là tên)
+    col_thanh_vien = df.columns[0]
+    df = df.set_index(col_thanh_vien)
     
-    # Tìm cột Thành viên
-    col_thanh_vien = next((c for c in df.columns if 'Thành viên' in c), df.columns[0])
+    # 3. Chỉ giữ lại các cột chứa số (điểm)
+    df = df.select_dtypes(include=['number'])
+
+    st.header(f"Dữ liệu: {selected_sheet}")
     
-    # Vẽ biểu đồ
-    df_melted = df.melt(id_vars=[col_thanh_vien], var_name='Câu hỏi', value_name='Điểm')
+    # 4. Dùng biểu đồ thanh mặc định (Rất nhanh và không lỗi)
+    st.bar_chart(df)
     
-    chart = alt.Chart(df_melted).mark_bar().encode(
-        x=alt.X('Điểm:Q', title='Điểm số'),
-        y=alt.Y(f'{col_thanh_vien}:N', title='Thành viên', sort='-x'),
-        color='Câu hỏi:N',
-        tooltip=[col_thanh_vien, 'Câu hỏi', 'Điểm']
-    ).properties(height=500).configure_axis(grid=False)
-    
-    st.altair_chart(chart, width='stretch')
-    
-    with st.expander("Xem dữ liệu"):
+    with st.expander("Xem bảng dữ liệu chi tiết"):
         st.dataframe(df)
 
 except Exception as e:
-    st.error(f"Lỗi: {e}. Vui lòng kiểm tra lại cấu trúc file Excel.")
+    st.error(f"Lỗi: {e}. Hãy kiểm tra xem file Excel của bạn có bị để trống dòng đầu tiên không nhé!")
