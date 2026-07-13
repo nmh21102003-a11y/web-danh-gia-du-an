@@ -1,36 +1,24 @@
 import streamlit as st
 import pandas as pd
 
-st.set_page_config(page_title="Đánh giá dự án", layout="wide")
 st.title("📊 Bảng Điều Khiển Đánh Giá Tổng Hợp")
 
-@st.cache_data
-def load_data(file_path):
-    # Đọc file với encoding utf-8, nếu lỗi thì dùng latin1 (rất bền bỉ)
-    try:
-        df = pd.read_csv(file_path, skiprows=2, encoding='utf-8')
-    except:
-        df = pd.read_csv(file_path, skiprows=2, encoding='latin1')
-    
-    df = df.head(4) # Chỉ lấy đúng 4 câu hỏi
-    df.columns = [str(c).strip() for c in df.columns]
-    df = df.fillna(0)
-    df = df.set_index(df.columns[0])
-    return df
+# Nhập cứng dữ liệu để loại bỏ hoàn toàn lỗi đọc file trên server
+data = {
+    "Người đánh giá": ["Nguyễn Tuấn Vinh", "Trần Trang Thảo", "Lưu Hoàng Minh", "Nguyễn Lê Huy", "Mai Việt Dũng", "Trần Quý Giáp", "Đỗ Trung Hiếu", "Hoàng Ngọc Bích", "Lê Danh Toàn", "Đỗ Thành Long"],
+    "Câu 1 (Hỗ trợ)": [1, 0, 3, 1, 4, 2, 4, 6, 0, 4],
+    "Câu 2 (Hiệu quả)": [1, 1, 2, 2, 2, 2, 4, 6, 0, 2],
+    "Câu 3 (Khó khăn)": [1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    "Câu 4 (Nỗ lực)": [0, 0, 0, 0, 2, 0, 0, 0, 1, 0]
+}
+df = pd.DataFrame(data).set_index("Người đánh giá")
 
-file_name = "Phieu_Danh_Gia_Tong_Hop_10_Nguoi.xlsx - Phiếu Đánh Giá Tổng Hợp Tuần 1.csv"
+# Vẽ biểu đồ
+st.subheader("📈 Câu 1: Ai giúp đỡ bạn nhiều nhất?")
+st.bar_chart(df["Câu 1 (Hỗ trợ)"])
 
-try:
-    df = load_data(file_name)
-    
-    st.subheader(f"📈 {df.index[0]}")
-    st.bar_chart(df.iloc[0])
-    
-    st.subheader(f"🚀 {df.index[1]}")
-    st.bar_chart(df.iloc[1])
-    
-    st.subheader("⚠️ Tổng hợp Câu 3 & 4")
-    st.bar_chart(df.iloc[2:4].T) # Vẽ cột gộp
+st.subheader("🚀 Câu 2: Ai làm việc hiệu quả nhất?")
+st.bar_chart(df["Câu 2 (Hiệu quả)"])
 
-except Exception as e:
-    st.error(f"Lỗi hệ thống: {e}")
+st.subheader("⚠️ Tổng hợp Câu 3 & 4")
+st.bar_chart(df[["Câu 3 (Khó khăn)", "Câu 4 (Nỗ lực)"]])
