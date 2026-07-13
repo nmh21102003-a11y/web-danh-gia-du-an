@@ -1,37 +1,45 @@
 import streamlit as st
 import pandas as pd
+import altair as alt
 
 st.set_page_config(layout="wide")
 st.title("📊 Bảng Đánh Giá Tổng Hợp Theo Tuần")
 
-# 1. Đọc file Excel (lưu ý: cần cài thư viện openpyxl)
 file_name = "Du_Lieu_Danh_Gia.xlsx"
 
 @st.cache_data
 def load_all_sheets():
-    # Đọc tất cả các sheet trong file Excel
     return pd.read_excel(file_name, sheet_name=None)
 
 try:
     all_sheets = load_all_sheets()
-    
-    # 2. Tạo menu chọn tuần (dựa trên tên Sheet)
     sheet_names = list(all_sheets.keys())
     selected_sheet = st.sidebar.selectbox("Chọn Tuần:", sheet_names)
     
-    # 3. Lấy dữ liệu của sheet đã chọn
     df = all_sheets[selected_sheet]
-    # Làm sạch dữ liệu: Bỏ 2 dòng đầu (nếu có tiêu đề thừa), lấy 4 câu hỏi
-    df = df.iloc[2:6] 
+    
+    # Làm sạch tên cột và tìm cột Thành viên
+    df.columns = df.columns.str.strip()
+    cols = df.columns.tolist()
+    col_thanh_vien = [c for c in cols if 'Thành viên' in str(c)][0]
+    
+    # Chuyển đổi dữ liệu sang dạng dài để vẽ biểu đồ Altair
+    df_melted = df.melt(id_vars=[col_thanh_vien], var_name='Câu hỏi', value_name='Điểm')
     
     st.header(f"Dữ liệu: {selected_sheet}")
     
-    # 4. Hiển thị biểu đồ
-    df_t = df.set_index(df.columns[0]).T
-    st.bar_chart(df_t)
+    # Vẽ biểu đồ thanh ngang
+    chart = alt.Chart(df_melted).mark_bar().encode(
+        x=alt.X('Điểm:Q', title='Điểm số'),
+        y=alt.Y(f'{col_thanh_vien}:N', title='Thành viên', sort='-x'),
+        color='Câu hỏi:N',
+        tooltip=[col_thanh_vien, 'Câu hỏi', 'Điểm']
+    ).properties(height=500)
+    
+    st.altair_chart(chart, use_container_width=True)
     
     with st.expander("Xem bảng dữ liệu chi tiết"):
         st.dataframe(df)
 
 except Exception as e:
-    st.error(f"Lỗi: {e}. Bạn hãy đảm bảo đã upload file 'Du_Lieu_Danh_Gia.xlsx' lên GitHub nhé!")
+    st.error(f"Lỗi: {e}. Hãy đảm bảo Sheet của bạn có cột tên là 'Thành viên'.")
