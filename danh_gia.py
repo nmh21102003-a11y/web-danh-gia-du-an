@@ -80,4 +80,6 @@ try:
         chart(cows[2:], '#e74c3c')
 
     with st.expander("📋 Số liệu chi tiết"):
-        st
+        st.dataframe(df_display, use_container_width=True, height=300)
+
+except Exception as e:
