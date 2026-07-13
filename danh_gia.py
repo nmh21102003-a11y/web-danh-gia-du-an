@@ -11,6 +11,9 @@ file_url = "https://github.com/nmh21102003-a11y/web-danh-gia-du-an/raw/refs/head
 def load_data():
     return pd.read_excel(file_url, sheet_name=None)
 
+# DANH SÁCH TÊN CỐ ĐỊNH (Bạn thêm/sửa tên tại đây để thứ tự không đổi)
+fixed_names = ["Nguyễn Tuấn Vinh", "Trần Trang Thảo", "Lưu Hoàng Minh", "Nguyễn Lê Huy", "Mai Việt Dũng", "Trần Quý Giáp", "Đỗ Trung Hiếu", "Hoàng Ngọc Bích", "Lê Danh Toàn", "Đỗ Thành Long"]
+
 try:
     all_sheets = load_data()
     selected_sheet = st.sidebar.selectbox("Tuần:", list(all_sheets.keys()))
@@ -24,8 +27,9 @@ try:
     def draw_chart(tieu_chi_list, title, color, note):
         data = df_long[df_long[col_tieu_chi].isin(tieu_chi_list)].groupby('Thành viên', as_index=False)['Điểm'].sum()
         
+        # Sắp xếp theo fixed_names để thứ tự luôn chuẩn
         c = alt.Chart(data).mark_bar(size=40).encode(
-            x=alt.X('Thành viên:N', axis=alt.Axis(labelAngle=0)),
+            x=alt.X('Thành viên:N', sort=fixed_names, axis=alt.Axis(labelAngle=0)),
             y=alt.Y('Điểm:Q', axis=alt.Axis(format="d", tickMinStep=1)), 
             color=alt.value(color)
         ).properties(height=300).interactive()
@@ -36,11 +40,9 @@ try:
 
     cows = df[col_tieu_chi].unique().tolist()
 
-    # Bảng 1
+    # Hiển thị
     draw_chart([cows[0]], "1️⃣ Tiêu chí 1", '#3498db', cows[0])
-    # Bảng 2
     draw_chart([cows[1]], "2️⃣ Tiêu chí 2", '#3498db', cows[1])
-    # Bảng 3 & 4 (Gộp)
     draw_chart([cows[2], cows[3]], "3️⃣ & 4️⃣ Tiêu chí tiêu cực", '#e74c3c', f"{cows[2]} & {cows[3]}")
 
     with st.expander("📋 Số liệu chi tiết"):
