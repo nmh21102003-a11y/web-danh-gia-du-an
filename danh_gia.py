@@ -20,6 +20,7 @@ try:
     # Xử lý dữ liệu
     df_raw = df_raw.loc[:, ~df_raw.columns.str.contains('^Unnamed')]
     col_cau_hoi = df_raw.columns[0]
+    # Lấy danh sách tên thành viên gốc từ Excel để khóa thứ tự
     danh_sach_thanh_vien = df_raw.columns[1:].tolist()
     
     df_long = df_raw.melt(id_vars=[col_cau_hoi], var_name='Thành viên', value_name='Điểm')
@@ -51,8 +52,8 @@ try:
     ve_bieu_do([danh_sach_cau[0]], f"1️⃣ {danh_sach_cau[0]}", '#3498db')
     ve_bieu_do([danh_sach_cau[1]], f"2️⃣ {danh_sach_cau[1]}", '#3498db')
     
-    # Bảng 3 & 4 gộp: Tiêu đề rõ ràng gồm cả 2 câu hỏi
-    ve_bieu_do([danh_sach_cau[2], danh_sach_cau[3]], "3️⃣ & 4️⃣ Tổng hợp", '#3498db')
+    # Bảng 3 & 4 gộp: Màu đỏ (đã đổi từ '#3498db' sang '#e74c3c')
+    ve_bieu_do([danh_sach_cau[2], danh_sach_cau[3]], "3️⃣ & 4️⃣ Tổng hợp", '#e74c3c')
 
     st.write("---")
     with st.expander("📋 Xem Bảng Số Liệu Chi Tiết"):
