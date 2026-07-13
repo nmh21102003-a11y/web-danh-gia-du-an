@@ -28,7 +28,7 @@ def load_data(file_path):
     return df
 
 # Tên file của bạn 
-file_name = "Phieu_Danh_Gia_Tong_Hop_10_Nguoi.xlsx - Phiếu Đánh Giá Tổng Hợp Tuần 1.csv"
+file_name = "Phieu_Danh_Gia_Tong_Hop_10_Nguoi.xlsx"
 
 try:
     df = load_data(file_name)
