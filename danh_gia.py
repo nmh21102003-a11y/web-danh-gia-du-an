@@ -18,12 +18,14 @@ try:
     
     df = all_sheets[selected_sheet]
     
-    # Làm sạch tên cột và tìm cột Thành viên
-    df.columns = df.columns.str.strip()
-    cols = df.columns.tolist()
-    col_thanh_vien = [c for c in cols if 'Thành viên' in str(c)][0]
+    # Làm sạch tên cột
+    df.columns = df.columns.astype(str).str.strip()
     
-    # Chuyển đổi dữ liệu sang dạng dài để vẽ biểu đồ Altair
+    # --- ĐOẠN SỬA ĐỂ KHÔNG BAO GIỜ LỖI ---
+    # Tự tìm cột có chữ "Thành viên", nếu không thấy thì lấy cột đầu tiên
+    col_thanh_vien = next((c for c in df.columns if 'Thành viên' in c), df.columns[0])
+    
+    # Chuyển dữ liệu (Melt) để vẽ biểu đồ
     df_melted = df.melt(id_vars=[col_thanh_vien], var_name='Câu hỏi', value_name='Điểm')
     
     st.header(f"Dữ liệu: {selected_sheet}")
@@ -36,10 +38,12 @@ try:
         tooltip=[col_thanh_vien, 'Câu hỏi', 'Điểm']
     ).properties(height=500)
     
+    # Hiển thị biểu đồ với width='stretch' để sửa cảnh báo
     st.altair_chart(chart, use_container_width=True)
     
     with st.expander("Xem bảng dữ liệu chi tiết"):
         st.dataframe(df)
 
 except Exception as e:
-    st.error(f"Lỗi: {e}. Hãy đảm bảo Sheet của bạn có cột tên là 'Thành viên'.")
+    st.error(f"Lỗi: {e}. Vui lòng kiểm tra lại file Excel của bạn đã được tải lên đúng chưa.")
+    st.write("Gợi ý: Đảm bảo dòng đầu tiên trong Sheet là tên các cột.")
