@@ -27,21 +27,21 @@ try:
     st.header(f"📌 Tuần: {selected_sheet}")
     st.write("---")
 
-    # Hàm vẽ biểu đồ với Altair + Thanh cuộn
+    # Hàm vẽ biểu đồ với trục Y định dạng số nguyên
     def ve_bieu_do_altair(cau_hoi, mau_sac):
         df_plot = df_long[df_long[col_cau_hoi] == cau_hoi]
         
-        # Thiết lập thanh cuộn: X cho phép cuộn ngang nếu width > khung hình
+        # Thêm format="d" vào trục Y để ép hiển thị số nguyên
         chart = alt.Chart(df_plot).mark_bar(color=mau_sac).encode(
             x=alt.X('Thành viên:N', sort=danh_sach_thanh_vien, axis=alt.Axis(labelAngle=0)),
-            y='Điểm:Q'
+            y=alt.Y('Điểm:Q', axis=alt.Axis(format="d")) 
         ).properties(
-            width=1000, # Độ rộng biểu đồ (lớn hơn khung hình sẽ tự tạo thanh cuộn)
+            width=1000, 
             height=300
-        ).interactive() # Cho phép tương tác (kéo, thả)
+        ).interactive()
         
         st.subheader(f"Tiêu chí: {cau_hoi}")
-        st.altair_chart(chart, use_container_width=False) # False để cho phép thanh cuộn xuất hiện
+        st.altair_chart(chart, use_container_width=False)
 
     danh_sach_cau = df_raw[col_cau_hoi].tolist()
 
