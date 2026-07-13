@@ -33,21 +33,15 @@ try:
     def ve_bieu_do(cau_hoi_list, tieu_de, mau_sac):
         df_plot = df_long[df_long[col_cau_hoi].isin(cau_hoi_list)]
         
-        # Cấu hình biểu đồ: 
-        # Nếu danh sách câu hỏi > 1, dùng xOffset để các cột cạnh nhau
-        # Nếu chỉ có 1 câu hỏi, vẽ cột đơn chuẩn
+        # SỬA Ở ĐÂY: Loại bỏ xOffset và logic đặc biệt, để giống hệt biểu đồ 1 và 2
         chart = alt.Chart(df_plot).mark_bar().encode(
             x=alt.X('Thành viên:N', sort=danh_sach_thanh_vien, axis=alt.Axis(labelAngle=0, bandPosition=0.5)),
             y=alt.Y('Điểm:Q', axis=alt.Axis(format="d")),
-            color=alt.value(mau_sac),
-            xOffset=f'{col_cau_hoi}:N' if len(cau_hoi_list) > 1 else alt.value(0)
+            color=alt.value(mau_sac)
         ).properties(width=1000, height=300).interactive()
         
         st.subheader(tieu_de)
-        if mau_sac == '#e74c3c': 
-            st.warning(f"⚠️ {', '.join(cau_hoi_list)}")
-        else:
-            st.info(f"💡 {cau_hoi_list[0]}")
+        st.info(f"💡 {cau_hoi_list[0]}")
             
         st.altair_chart(chart, use_container_width=False)
 
@@ -56,7 +50,10 @@ try:
     # Hiển thị
     ve_bieu_do([danh_sach_cau[0]], f"1️⃣ {danh_sach_cau[0]}", '#3498db')
     ve_bieu_do([danh_sach_cau[1]], f"2️⃣ {danh_sach_cau[1]}", '#3498db')
-    ve_bieu_do([danh_sach_cau[2], danh_sach_cau[3]], "3️⃣ & 4️⃣ Tiêu chí tiêu cực", '#e74c3c')
+    
+    # Bảng 3: Hiển thị tách biệt từng câu, mỗi câu là 1 biểu đồ chuẩn giống bảng 1,2
+    ve_bieu_do([danh_sach_cau[2]], f"3️⃣ {danh_sach_cau[2]}", '#3498db')
+    ve_bieu_do([danh_sach_cau[3]], f"4️⃣ {danh_sach_cau[3]}", '#3498db')
 
     st.write("---")
     with st.expander("📋 Xem Bảng Số Liệu Chi Tiết"):
