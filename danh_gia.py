@@ -3,7 +3,7 @@ import pandas as pd
 import altair as alt
 
 st.set_page_config(layout="wide")
-st.title("📊 Hệ thống Đánh giá Hiệu suất Horizon")
+st.title("📊 Hệ thống Theo dõi & Đánh giá Thành viên")
 
 file_name = "Du_Lieu_Danh_Gia.xlsx"
 
@@ -27,39 +27,33 @@ try:
     st.header(f"📌 Tuần: {selected_sheet}")
     st.write("---")
 
-    # Hàm vẽ biểu đồ thường (Câu 1, 2)
-    def ve_bieu_do_don(cau_hoi, mau_sac):
-        df_plot = df_long[df_long[col_cau_hoi] == cau_hoi]
-        chart = alt.Chart(df_plot).mark_bar(color=mau_sac).encode(
-            x=alt.X('Thành viên:N', sort=danh_sach_thanh_vien, axis=alt.Axis(labelAngle=0)),
-            y=alt.Y('Điểm:Q', axis=alt.Axis(format="d")) 
-        ).properties(width=1000, height=300).interactive()
+    # Hàm vẽ chung cho tất cả các loại biểu đồ
+    def ve_bieu_do(cau_hoi_list, tieu_de, mau_sac):
+        df_plot = df_long[df_long[col_cau_hoi].isin(cau_hoi_list)]
         
-        st.subheader(f"Tiêu chí: {cau_hoi}")
-        st.altair_chart(chart, use_container_width=False)
-
-    # Hàm vẽ biểu đồ GỘP Câu 3 & 4 (trên cùng 1 biểu đồ)
-    def ve_bieu_do_gop_chung(cau_hoi_3, cau_hoi_4):
-        df_plot = df_long[df_long[col_cau_hoi].isin([cau_hoi_3, cau_hoi_4])]
-        
-        # Dùng barmode='group' bằng cách đặt Câu hỏi vào thuộc tính color
+        # Cấu hình biểu đồ
         chart = alt.Chart(df_plot).mark_bar().encode(
+            # X ép hiển thị đủ tất cả các thành viên (domain)
             x=alt.X('Thành viên:N', sort=danh_sach_thanh_vien, axis=alt.Axis(labelAngle=0)),
             y=alt.Y('Điểm:Q', axis=alt.Axis(format="d")),
-            color=alt.Color(f'{col_cau_hoi}:N', scale=alt.Scale(scheme='reds')), # Màu đỏ cho tiêu cực
-            xOffset=alt.X(f'{col_cau_hoi}:N') # Tách cột cạnh nhau
+            color=alt.value(mau_sac),
+            xOffset=f'{col_cau_hoi}:N' # Tách cột cạnh nhau nếu là 2 câu
         ).properties(width=1000, height=300).interactive()
         
-        st.subheader("3️⃣ & 4️⃣ Tiêu chí tiêu cực")
-        st.warning(f"⚠️ {cau_hoi_3} & {cau_hoi_4}")
+        st.subheader(tieu_de)
+        if mau_sac == '#e74c3c': # Nếu là câu tiêu cực
+            st.warning(f"⚠️ {', '.join(cau_hoi_list)}")
+        else:
+            st.info(f"💡 {cau_hoi_list[0]}")
+            
         st.altair_chart(chart, use_container_width=False)
 
     danh_sach_cau = df_raw[col_cau_hoi].tolist()
 
     # Hiển thị
-    ve_bieu_do_don(danh_sach_cau[0], '#3498db') # Câu 1
-    ve_bieu_do_don(danh_sach_cau[1], '#3498db') # Câu 2
-    ve_bieu_do_gop_chung(danh_sach_cau[2], danh_sach_cau[3]) # Gộp chung Câu 3 & 4
+    ve_bieu_do([danh_sach_cau[0]], "1️⃣ Tiêu chí Câu 1", '#3498db')
+    ve_bieu_do([danh_sach_cau[1]], "2️⃣ Tiêu chí Câu 2", '#3498db')
+    ve_bieu_do([danh_sach_cau[2], danh_sach_cau[3]], "3️⃣ & 4️⃣ Tiêu chí tiêu cực", '#e74c3c')
 
     st.write("---")
     with st.expander("📋 Xem Bảng Số Liệu Chi Tiết"):
