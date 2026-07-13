@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import plotly.express as px
 
 st.set_page_config(layout="wide")
 st.title("📊 Bảng Điều Khiển Đánh Giá Chi Tiết")
@@ -20,37 +21,42 @@ try:
     col_cau_hoi = df_raw.columns[0]
     noi_dung_cau_hoi = df_raw.set_index(col_cau_hoi).index.tolist()
     
-    # Xoay bảng để Thành viên nằm ở trục X (ngang)
+    # Xoay bảng để Thành viên nằm ở trục X
     df = df_raw.set_index(col_cau_hoi).T
     df.index.name = "Thành viên"
     
-    # Đặt tên cột ngắn gọn để tránh biểu đồ bị rối
     df.columns = [f"Câu {i+1}" for i in range(len(df.columns))]
     df_numeric = df.apply(pd.to_numeric, errors='coerce').fillna(0)
+    df_chart = df_numeric.reset_index()
 
-    # --- 2. GIAO DIỆN ---
+    # --- 2. GIAO DIỆN VỚI PLOTLY (TÊN NGANG & THANH CUỘN) ---
     st.header(f"📌 Tuần Đánh Giá: {selected_sheet}")
     st.write("---")
 
-    # Hàm hiển thị biểu đồ
-    def ve_bieu_do(tieu_de, noi_dung, du_lieu):
+    def ve_bieu_do_plotly(tieu_de, noi_dung, columns_to_plot):
         st.subheader(tieu_de)
-        st.info(f"💡 Tiêu chí: {noi_dung}")
-        # Lệnh bar_chart mặc định của Streamlit sẽ tự động để tên nằm ngang
-        st.bar_chart(du_lieu)
+        st.info(f"💡 Nội dung: {noi_dung}")
+        
+        # Tạo biểu đồ Plotly
+        fig = px.bar(df_chart, x='Thành viên', y=columns_to_plot, 
+                     barmode='group', template='plotly_white')
+        
+        # Ép tên nằm ngang
+        fig.update_xaxes(tickangle=0)
+        
+        # Cấu hình thanh cuộn (nếu có nhiều thành viên)
+        fig.update_layout(xaxis=dict(rangeslider=dict(visible=True)))
+        
+        st.plotly_chart(fig, use_container_width=True)
 
-    # CHART 1
-    ve_bieu_do("1️⃣ Tiêu chí Câu 1", noi_dung_cau_hoi[0], df_numeric[['Câu 1']])
-
-    # CHART 2
-    ve_bieu_do("2️⃣ Tiêu chí Câu 2", noi_dung_cau_hoi[1], df_numeric[['Câu 2']])
-
-    # CHART 3
-    ve_bieu_do("3️⃣ Tiêu chí Câu 3 & Câu 4", f"{noi_dung_cau_hoi[2]} & {noi_dung_cau_hoi[3]}", df_numeric[['Câu 3', 'Câu 4']])
+    # CHART 1 & 2 & 3
+    ve_bieu_do_plotly("1️⃣ Tiêu chí Câu 1", noi_dung_cau_hoi[0], ['Câu 1'])
+    ve_bieu_do_plotly("2️⃣ Tiêu chí Câu 2", noi_dung_cau_hoi[1], ['Câu 2'])
+    ve_bieu_do_plotly("3️⃣ Tiêu chí Câu 3 & Câu 4", f"{noi_dung_cau_hoi[2]} & {noi_dung_cau_hoi[3]}", ['Câu 3', 'Câu 4'])
 
     st.write("---")
     with st.expander("📋 Xem Bảng Số Liệu Chi Tiết"):
         st.dataframe(df_numeric, use_container_width=True)
 
 except Exception as e:
-    st.error(f"Lỗi: {e}. Vui lòng kiểm tra file Excel.")
+    st.error(f"Lỗi: {e}")
