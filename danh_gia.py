@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import altair as alt
 
 st.set_page_config(layout="wide")
 st.title("📊 Hệ thống Theo dõi Tiến độ & Đánh giá Horizon")
@@ -16,7 +15,7 @@ try:
     selected_sheet = st.sidebar.selectbox("Tuần Đánh Giá:", list(all_sheets.keys()))
     df_raw = all_sheets[selected_sheet]
 
-    # --- XỬ LÝ DỮ LIỆU ---
+    # --- 1. XỬ LÝ DỮ LIỆU ---
     df_raw = df_raw.loc[:, ~df_raw.columns.str.contains('^Unnamed')]
     col_cau_hoi = df_raw.columns[0]
     noi_dung_cau_hoi = df_raw.set_index(col_cau_hoi).index.tolist()
@@ -24,7 +23,7 @@ try:
     df = df_raw.set_index(col_cau_hoi).T
     df.index.name = "Thành viên"
     
-    # Bẻ tên thành viên để nằm ngang
+    # Bẻ tên nằm ngang
     def be_gay_ten(ten):
         parts = str(ten).split(' ')
         if len(parts) >= 3: return f"{parts[0]}\n{parts[1]}\n{parts[2]}"
@@ -34,35 +33,28 @@ try:
     
     df.columns = [f"Câu {i+1}" for i in range(len(df.columns))]
     df_numeric = df.apply(pd.to_numeric, errors='coerce').fillna(0)
-    df_chart = df_numeric.reset_index()
 
+    # --- 2. GIAO DIỆN ---
     st.header(f"📌 Tuần: {selected_sheet}")
     st.write("---")
 
-    # Hàm vẽ cột Xanh (Câu 1, 2)
-    def ve_bieu_do_xanh(tieu_de, noi_dung, col):
-        st.subheader(tieu_de)
-        st.info(f"💡 {noi_dung}")
-        st.bar_chart(df_numeric[[col]])
+    # Câu 1 & 2: Dùng bar_chart bình thường
+    st.subheader("1️⃣ Tiêu chí Câu 1")
+    st.info(f"💡 {noi_dung_cau_hoi[0]}")
+    st.bar_chart(df_numeric[['Câu 1']])
 
-    # CHART 1 & 2
-    ve_bieu_do_xanh("1️⃣ Tiêu chí Câu 1", noi_dung_cau_hoi[0], "Câu 1")
-    ve_bieu_do_xanh("2️⃣ Tiêu chí Câu 2", noi_dung_cau_hoi[1], "Câu 2")
+    st.subheader("2️⃣ Tiêu chí Câu 2")
+    st.info(f"💡 {noi_dung_cau_hoi[1]}")
+    st.bar_chart(df_numeric[['Câu 2']])
 
-    # CHART 3 (Gộp Câu 3, 4 màu Đỏ)
+    # Câu 3 & 4: Dùng bar_chart, và nó sẽ tự hiển thị màu khác cho bạn
     st.subheader("3️⃣ Tiêu chí Câu 3 & Câu 4")
     st.warning(f"⚠️ {noi_dung_cau_hoi[2]} & {noi_dung_cau_hoi[3]}")
-    
-    # Dùng Altair để gộp và đổi màu Đỏ
-    df_melt = df_chart.melt(id_vars=['Thành viên'], value_vars=['Câu 3', 'Câu 4'], var_name='Câu', value_name='Điểm')
-    chart = alt.Chart(df_melt).mark_bar(color='#e74c3c').encode(
-        x=alt.X('Thành viên:N', axis=alt.Axis(labelAngle=0)),
-        y='Điểm:Q',
-        column='Câu:N'
-    )
-    st.altair_chart(chart, use_container_width=True)
+    st.bar_chart(df_numeric[['Câu 3', 'Câu 4']])
 
-    with st.expander("📋 Xem Bảng Số Liệu"):
+    # --- BẢNG DỮ LIỆU ---
+    st.write("---")
+    with st.expander("📋 Xem Bảng Số Liệu Chi Tiết"):
         st.dataframe(df_numeric, use_container_width=True)
 
 except Exception as e:
