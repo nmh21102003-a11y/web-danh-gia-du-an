@@ -31,17 +31,18 @@ try:
     st.header(f"📌 Tuần: {selected_sheet}")
     st.write("---")
 
-    # Hàm vẽ biểu đồ CỐ ĐỊNH định dạng để bảng 1, 2, 3 giống hệt nhau
+    # Hàm vẽ biểu đồ CỐ ĐỊNH định dạng
     def ve_bieu_do(cau_hoi_list, tieu_de, mau_sac):
         # Lọc dữ liệu: Nếu gộp thì cộng điểm, nếu không thì lấy giá trị
         df_plot = df_long[df_long[col_cau_hoi].isin(cau_hoi_list)].groupby('Thành viên', as_index=False)['Điểm'].sum()
         
-        # Vẽ biểu đồ với thông số KHÓA CỨNG
+        # Vẽ biểu đồ
+        # .interactive(bind_y=False) cho phép nhấn giữ chuột trái để kéo (cuộn ngang) biểu đồ
         chart = alt.Chart(df_plot).mark_bar(size=40).encode(
             x=alt.X('Thành viên:N', sort=danh_sach_thanh_vien, axis=alt.Axis(labelAngle=0)),
             y=alt.Y('Điểm:Q', axis=alt.Axis(format="d")),
             color=alt.value(mau_sac)
-        ).properties(width=800, height=300)
+        ).properties(width=800, height=300).interactive(bind_y=False)
         
         st.subheader(tieu_de)
         st.altair_chart(chart, use_container_width=True)
