@@ -16,41 +16,40 @@ try:
     selected_sheet = st.sidebar.selectbox("Tuần Đánh Giá:", list(all_sheets.keys()))
     df_raw = all_sheets[selected_sheet]
 
-    # --- XỬ LÝ DỮ LIỆU ĐỂ GIỮ NGUYÊN THỨ TỰ ---
+    # --- XỬ LÝ DỮ LIỆU ---
     df_raw = df_raw.loc[:, ~df_raw.columns.str.contains('^Unnamed')]
     col_cau_hoi = df_raw.columns[0]
-    # Lấy danh sách tên theo đúng cột trong Excel
     danh_sach_thanh_vien = df_raw.columns[1:].tolist()
     
-    # Định dạng dữ liệu dạng dài (long format) cho Altair
     df_long = df_raw.melt(id_vars=[col_cau_hoi], var_name='Thành viên', value_name='Điểm')
     df_long['Điểm'] = pd.to_numeric(df_long['Điểm'], errors='coerce').fillna(0)
 
     st.header(f"📌 Tuần: {selected_sheet}")
     st.write("---")
 
-    # Hàm vẽ biểu đồ với Altair (Cho phép ép tên nằm ngang và giữ thứ tự)
+    # Hàm vẽ biểu đồ với Altair + Thanh cuộn
     def ve_bieu_do_altair(cau_hoi, mau_sac):
         df_plot = df_long[df_long[col_cau_hoi] == cau_hoi]
         
+        # Thiết lập thanh cuộn: X cho phép cuộn ngang nếu width > khung hình
         chart = alt.Chart(df_plot).mark_bar(color=mau_sac).encode(
-            x=alt.X('Thành viên:N', sort=danh_sach_thanh_vien, axis=alt.Axis(labelAngle=0)), # labelAngle=0 ép nằm ngang
+            x=alt.X('Thành viên:N', sort=danh_sach_thanh_vien, axis=alt.Axis(labelAngle=0)),
             y='Điểm:Q'
-        ).properties(width=800, height=300)
+        ).properties(
+            width=1000, # Độ rộng biểu đồ (lớn hơn khung hình sẽ tự tạo thanh cuộn)
+            height=300
+        ).interactive() # Cho phép tương tác (kéo, thả)
         
         st.subheader(f"Tiêu chí: {cau_hoi}")
-        st.altair_chart(chart, use_container_width=True)
+        st.altair_chart(chart, use_container_width=False) # False để cho phép thanh cuộn xuất hiện
 
-    # Lấy danh sách các câu hỏi
     danh_sach_cau = df_raw[col_cau_hoi].tolist()
 
     # Vẽ biểu đồ
-    ve_bieu_do_altair(danh_sach_cau[0], '#3498db') # Câu 1 (Xanh)
-    ve_bieu_do_altair(danh_sach_cau[1], '#3498db') # Câu 2 (Xanh)
-    
-    # Câu 3 & 4 (Đỏ)
-    ve_bieu_do_altair(danh_sach_cau[2], '#e74c3c')
-    ve_bieu_do_altair(danh_sach_cau[3], '#e74c3c')
+    ve_bieu_do_altair(danh_sach_cau[0], '#3498db') # Câu 1
+    ve_bieu_do_altair(danh_sach_cau[1], '#3498db') # Câu 2
+    ve_bieu_do_altair(danh_sach_cau[2], '#e74c3c') # Câu 3
+    ve_bieu_do_altair(danh_sach_cau[3], '#e74c3c') # Câu 4
 
     st.write("---")
     with st.expander("📋 Xem Bảng Số Liệu Chi Tiết"):
