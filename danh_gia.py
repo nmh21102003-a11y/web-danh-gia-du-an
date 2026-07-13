@@ -1,74 +1,36 @@
 import streamlit as st
 import pandas as pd
 
-# Tiêu đề trang web
-st.title("📊 Bảng Điều Khiển Đánh Giá Tổng Hợp Theo Tuần")
-st.markdown("Dữ liệu được trích xuất từ: **Tuần 1**")
+st.set_page_config(page_title="Đánh giá dự án", layout="wide")
+st.title("📊 Bảng Điều Khiển Đánh Giá Tổng Hợp")
 
-# Hàm đọc và làm sạch dữ liệu
 @st.cache_data
 def load_data(file_path):
-    # Đọc dữ liệu, tự động bỏ qua các dòng rác gây lỗi ở cuối file (on_bad_lines='skip')
+    # Đọc file với encoding utf-8, nếu lỗi thì dùng latin1 (rất bền bỉ)
     try:
-        df = pd.read_csv(file_path, skiprows=2, encoding='utf-8', on_bad_lines='skip')
-    except Exception:
-        try:
-            df = pd.read_csv(file_path, skiprows=2, encoding='cp1258', on_bad_lines='skip')
-        except Exception:
-            df = pd.read_csv(file_path, skiprows=2, encoding='latin1', on_bad_lines='skip')
+        df = pd.read_csv(file_path, skiprows=2, encoding='utf-8')
+    except:
+        df = pd.read_csv(file_path, skiprows=2, encoding='latin1')
     
-    # Chốt chặt chỉ lấy 4 dòng đầu tiên tương ứng với 4 câu hỏi 
-    df = df.head(4)
-    
-    # Xử lý tên cột: Xóa dấu xuống dòng (\n) trong tên người
-    df.columns = [str(col).replace('\n', ' ') for col in df.columns]
-    
-    # Điền giá trị 0 cho những ô trống (NaN)
+    df = df.head(4) # Chỉ lấy đúng 4 câu hỏi
+    df.columns = [str(c).strip() for c in df.columns]
     df = df.fillna(0)
-    
-    # Đặt cột câu hỏi làm Index (Hàng dọc)
     df = df.set_index(df.columns[0])
     return df
 
-# Tên file của bạn (Nếu lúc nãy bạn đã sửa tên file thì nhớ đổi lại dòng này cho khớp nhé)
 file_name = "Phieu_Danh_Gia_Tong_Hop_10_Nguoi.xlsx"
 
 try:
     df = load_data(file_name)
     
-    # Tách dữ liệu theo từng câu hỏi
-    q1_data = df.iloc[0]
-    q2_data = df.iloc[1]
-    q3_data = df.iloc[2]
-    q4_data = df.iloc[3]
+    st.subheader(f"📈 {df.index[0]}")
+    st.bar_chart(df.iloc[0])
     
-    st.divider()
+    st.subheader(f"🚀 {df.index[1]}")
+    st.bar_chart(df.iloc[1])
+    
+    st.subheader("⚠️ Tổng hợp Câu 3 & 4")
+    st.bar_chart(df.iloc[2:4].T) # Vẽ cột gộp
 
-    # --- CHART 1 ---
-    st.subheader(f"📈 Biểu đồ 1: {df.index[0]}")
-    st.bar_chart(q1_data, color="#1f77b4")
-    
-    # --- CHART 2 ---
-    st.subheader(f"🚀 Biểu đồ 2: {df.index[1]}")
-    st.bar_chart(q2_data, color="#2ca02c")
-    
-    # --- CHART 3 (TỔNG HỢP CÂU 3 & 4) ---
-    st.subheader("⚠️ Biểu đồ 3: Tổng hợp điểm cần nỗ lực & Khó khăn (Câu 3 & 4)")
-    
-    # Gộp dữ liệu câu 3 và câu 4 vào thành một bảng mới
-    combined_df = pd.DataFrame({
-        'Câu 3: Gây khó khăn': q3_data,
-        'Câu 4: Cần nỗ lực hơn': q4_data
-    })
-    
-    # Vẽ biểu đồ cột ghép
-    st.bar_chart(combined_df, color=["#d62728", "#ff7f0e"])
-    
-    # Thêm phần xem dữ liệu thô
-    with st.expander("Bấm vào đây để xem bảng dữ liệu chi tiết"):
-        st.dataframe(df)
-
-except FileNotFoundError:
-    st.error(f"Không tìm thấy file `{file_name}`. Hãy kiểm tra lại xem tên file có giống hệt file trên GitHub không nhé.")
 except Exception as e:
-    st.error(f"Có lỗi xảy ra: {e}")
+    st.error(f"Lỗi hệ thống: {e}")
