@@ -1,40 +1,37 @@
 import streamlit as st
 import pandas as pd
-import altair as alt
 
-st.set_page_config(page_title="Đánh giá dự án", layout="wide")
-st.title("📊 Bảng Điều Khiển Đánh Giá Tổng Hợp")
+st.set_page_config(layout="wide")
+st.title("📊 Bảng Đánh Giá Tổng Hợp Theo Tuần")
+
+# 1. Đọc file Excel (lưu ý: cần cài thư viện openpyxl)
+file_name = "Du_Lieu_Danh_Gia.xlsx"
 
 @st.cache_data
-def load_data():
-    # Đọc file với encoding utf-8-sig để hỗ trợ tiếng Việt có dấu
-    df = pd.read_csv("data_tong_hop.csv", encoding='utf-8-sig')
-    # Làm sạch tên cột: xóa khoảng trắng, đổi tên về chuẩn
-    df.columns = df.columns.str.strip()
-    return df
+def load_all_sheets():
+    # Đọc tất cả các sheet trong file Excel
+    return pd.read_excel(file_name, sheet_name=None)
 
 try:
-    df = load_data()
+    all_sheets = load_all_sheets()
     
-    # Tìm cột Tuần (chấp nhận cả 'Tuần' hoặc 'Tuan')
-    tuan_col = [c for c in df.columns if 'Tuan' in c or 'Tuần' in c][0]
+    # 2. Tạo menu chọn tuần (dựa trên tên Sheet)
+    sheet_names = list(all_sheets.keys())
+    selected_sheet = st.sidebar.selectbox("Chọn Tuần:", sheet_names)
     
-    tuan_list = df[tuan_col].unique()
-    selected_tuan = st.sidebar.selectbox("Chọn tuần cần xem:", tuan_list)
+    # 3. Lấy dữ liệu của sheet đã chọn
+    df = all_sheets[selected_sheet]
+    # Làm sạch dữ liệu: Bỏ 2 dòng đầu (nếu có tiêu đề thừa), lấy 4 câu hỏi
+    df = df.iloc[2:6] 
     
-    df_tuan = df[df[tuan_col] == selected_tuan]
-    st.header(f"Dữ liệu: {selected_tuan}")
+    st.header(f"Dữ liệu: {selected_sheet}")
     
-    # Biểu đồ
-    st.subheader("So sánh kết quả các Thành viên")
-    chart = alt.Chart(df_tuan).mark_bar().encode(
-        x=alt.X('Câu 1: Ai là người giúp đỡ, hỗ trợ bạn nhiều nhất trong thời gian vừa qua?', title='Điểm số'),
-        y=alt.Y('Thành viên', sort='-x', title=''),
-        color='Thành viên',
-        tooltip=['Thành viên', 'Câu 1: Ai là người giúp đỡ, hỗ trợ bạn nhiều nhất trong thời gian vừa qua?']
-    ).properties(height=400)
+    # 4. Hiển thị biểu đồ
+    df_t = df.set_index(df.columns[0]).T
+    st.bar_chart(df_t)
     
-    st.altair_chart(chart, use_container_width=True)
+    with st.expander("Xem bảng dữ liệu chi tiết"):
+        st.dataframe(df)
 
 except Exception as e:
-    st.error(f"Lỗi: {e}. Hãy kiểm tra lại file CSV của bạn đã có cột 'Tuần' và 'Thành viên' chưa.")
+    st.error(f"Lỗi: {e}. Bạn hãy đảm bảo đã upload file 'Du_Lieu_Danh_Gia.xlsx' lên GitHub nhé!")
