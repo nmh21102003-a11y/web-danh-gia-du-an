@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import altair as alt  # Thư viện vẽ biểu đồ chuyên sâu tích hợp sẵn của Streamlit
 
 st.set_page_config(layout="wide")
 st.title("📊 Bảng Điều Khiển Đánh Giá Chi Tiết")
@@ -16,19 +17,15 @@ try:
     df_raw = all_sheets[selected_sheet]
 
     # --- DỌN DẸP & ĐẢO CHIỀU DỮ LIỆU ---
-    # 1. Bỏ cột rác do Excel tự sinh ra
     df_raw = df_raw.loc[:, ~df_raw.columns.str.contains('^Unnamed')]
-    
-    # 2. Xoay bảng (Transpose): Vì file Excel của bạn có Câu hỏi nằm ở Cột 1 và Tên ở Dòng 1.
     col_cau_hoi = df_raw.columns[0]
     df_raw = df_raw.set_index(col_cau_hoi)
     
-    # LỆNH XOAY BẢNG MA THUẬT: Đổi Hàng thành Cột, Cột thành Hàng
+    # Xoay bảng (Đưa Thành viên ra trục ngang)
     df = df_raw.T 
     df.index.name = "Thành viên"
     
-    # 3. Rút gọn tên câu hỏi cho biểu đồ đẹp hơn
-    # Ví dụ: "1. Ai là người..." sẽ biến thành "Câu 1"
+    # Rút gọn tên câu hỏi
     def rut_gon_ten(ten):
         ten = str(ten)
         if '.' in ten:
@@ -41,32 +38,63 @@ try:
     df_numeric = df.apply(pd.to_numeric, errors='coerce').fillna(0)
     cols = df_numeric.columns.tolist()
 
-    # --- TIẾN HÀNH VẼ BIỂU ĐỒ ---
     if len(cols) >= 4:
         c1, c2, c3, c4 = cols[0], cols[1], cols[2], cols[3]
         
         st.header(f"📌 Tuần Đánh Giá: {selected_sheet}")
         st.write("---")
 
-        # CHART 1: CÂU 1 (Biểu đồ Cột hiển thị toàn bộ thành viên)
+        # --- CHUẨN BỊ VẼ BIỂU ĐỒ CÓ THANH CUỘN ---
+        df_chart = df_numeric.reset_index()
+        ten_cot_tv = df_chart.columns[0]
+
+        # Đặt chiều rộng cố định để ÉP TẠO THANH CUỘN (1200px)
+        CHIEU_RONG = 1200
+
+        # ==========================================
+        # CHART 1: CÂU 1 (Biểu đồ Cột)
+        # ==========================================
         st.subheader(f"1️⃣ Điểm tiêu chí: {c1}")
-        st.bar_chart(df_numeric[[c1]]) 
+        chart1 = alt.Chart(df_chart).mark_bar(color='#3498db').encode(
+            x=alt.X(f'{ten_cot_tv}:N', axis=alt.Axis(labelAngle=0, title='')), # labelAngle=0 ép tên nằm Ngang
+            y=alt.Y(f'{c1}:Q', axis=alt.Axis(title='Điểm số')),
+            tooltip=[ten_cot_tv, c1]
+        ).properties(width=CHIEU_RONG, height=400)
+        st.altair_chart(chart1, use_container_width=False) # False để nhả thanh cuộn
 
-        # CHART 2: CÂU 2 (Biểu đồ Đường hiển thị toàn bộ thành viên)
+        # ==========================================
+        # CHART 2: CÂU 2 (Biểu đồ Đường)
+        # ==========================================
         st.subheader(f"2️⃣ Điểm tiêu chí: {c2}")
-        st.line_chart(df_numeric[[c2]])
+        chart2 = alt.Chart(df_chart).mark_line(point=alt.OverlayMarkDef(color="red", size=100), color='#e74c3c', strokeWidth=3).encode(
+            x=alt.X(f'{ten_cot_tv}:N', axis=alt.Axis(labelAngle=0, title='')), # labelAngle=0 ép tên nằm Ngang
+            y=alt.Y(f'{c2}:Q', axis=alt.Axis(title='Điểm số')),
+            tooltip=[ten_cot_tv, c2]
+        ).properties(width=CHIEU_RONG, height=400)
+        st.altair_chart(chart2, use_container_width=False)
 
-        # CHART 3: CÂU 3 & CÂU 4 (Gộp chung vào 1 biểu đồ)
+        # ==========================================
+        # CHART 3: CÂU 3 & CÂU 4 (Gộp)
+        # ==========================================
         st.subheader(f"3️⃣ So sánh tiêu chí: {c3} & {c4}")
-        st.bar_chart(df_numeric[[c3, c4]])
+        # Trộn cột 3 và 4 lại để Altair có thể vẽ chung 1 biểu đồ
+        df_melt = df_chart[[ten_cot_tv, c3, c4]].melt(id_vars=[ten_cot_tv], var_name='Tiêu chí', value_name='Điểm')
+        chart3 = alt.Chart(df_melt).mark_bar().encode(
+            x=alt.X(f'{ten_cot_tv}:N', axis=alt.Axis(labelAngle=0, title='')), # labelAngle=0 ép tên nằm Ngang
+            y=alt.Y('Điểm:Q', axis=alt.Axis(title='Tổng Điểm')),
+            color='Tiêu chí:N',
+            tooltip=[ten_cot_tv, 'Tiêu chí', 'Điểm']
+        ).properties(width=CHIEU_RONG, height=400)
+        st.altair_chart(chart3, use_container_width=False)
 
     else:
         st.warning("File Excel cần ít nhất 4 dòng câu hỏi đánh giá để hiển thị đủ biểu đồ.")
         
     # --- BẢNG DỮ LIỆU ĐÃ XOAY CHIỀU ---
     st.write("---")
-    with st.expander("📋 Xem Bảng Số Liệu Chi Tiết (Đã được chuẩn hóa)"):
-        st.dataframe(df_numeric, use_container_width=True)
+    with st.expander("📋 Xem Bảng Số Liệu Chi Tiết"):
+        # Bảng hiển thị tự động có thanh cuộn nếu màn hình nhỏ
+        st.dataframe(df_numeric, use_container_width=False)
 
 except Exception as e:
     st.error(f"Lỗi: {e}")
