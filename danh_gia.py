@@ -23,9 +23,9 @@ try:
 
     def chart(rows, color):
         data = df_long[df_long[df_raw.columns[0]].isin(rows)].groupby('Thành viên', as_index=False)['Điểm'].sum()
-        # tickMinStep=1 đảm bảo trục tung chỉ hiển thị số nguyên 0, 1, 2, 3, 4...
-        c = alt.Chart(data).mark_bar(size=30).encode(
-            x=alt.X('Thành viên:N', sort=names, axis=alt.Axis(labelAngle=0)),
+        # padding=0.1 giúp các cột sát nhau hơn
+        c = alt.Chart(data).mark_bar(size=40).encode(
+            x=alt.X('Thành viên:N', sort=names, axis=alt.Axis(labelAngle=0, padding=0.1)),
             y=alt.Y('Điểm:Q', axis=alt.Axis(format="d", tickMinStep=1)), 
             color=alt.value(color)
         ).properties(height=300).interactive()
@@ -49,4 +49,4 @@ try:
         st.dataframe(df_raw, use_container_width=True, height=300)
 
 except Exception:
-    st.error("Lỗi dữ liệu!")
+    st.error("Lỗi dữ liệu! Hãy kiểm tra lại file Excel.")
