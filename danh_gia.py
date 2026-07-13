@@ -2,12 +2,14 @@ import streamlit as st
 import pandas as pd
 import altair as alt
 
+# Cấu hình trang
 st.set_page_config(layout="wide")
 st.title("📊 Hệ thống Theo dõi & Đánh giá Thành viên")
 
-# Link GitHub của bạn
+# Đường dẫn file từ GitHub của bạn
 file_url = "https://github.com/nmh21102003-a11y/web-danh-gia-du-an/raw/refs/heads/main/Du_Lieu_Danh_Gia.xlsx"
 
+# Hàm tải dữ liệu tự làm mới mỗi 60 giây
 @st.cache_data(ttl=60)
 def load_data():
     return pd.read_excel(file_url, sheet_name=None)
@@ -17,6 +19,7 @@ try:
     selected_sheet = st.sidebar.selectbox("Tuần Đánh Giá:", list(all_sheets.keys()))
     df_raw = all_sheets[selected_sheet]
 
+    # Xử lý dữ liệu
     df_raw = df_raw.loc[:, ~df_raw.columns.str.contains('^Unnamed')]
     col_cau_hoi = df_raw.columns[0]
     danh_sach_thanh_vien = df_raw.columns[1:].tolist()
@@ -50,11 +53,13 @@ try:
     ve_bieu_do([danh_sach_cau[0]], f"1️⃣ {danh_sach_cau[0]}", '#3498db')
     # Bảng 2
     ve_bieu_do([danh_sach_cau[1]], f"2️⃣ {danh_sach_cau[1]}", '#3498db')
-    # Bảng 3 (Gộp câu 3 & 4) - Vẫn dùng hàm ve_bieu_do này để giữ y hệt hình thức bảng 1 & 2
+    # Bảng 3 (Gộp câu 3 & 4, màu đỏ)
     ve_bieu_do([danh_sach_cau[2], danh_sach_cau[3]], f"3️⃣ & 4️⃣ {danh_sach_cau[2]} + {danh_sach_cau[3]}", '#e74c3c')
 
+    # Bảng chi tiết có thanh cuộn (height=400)
+    st.write("---")
     with st.expander("📋 Xem Bảng Số Liệu Chi Tiết"):
-        st.dataframe(df_raw, use_container_width=True)
+        st.dataframe(df_raw, use_container_width=True, height=400)
 
 except Exception as e:
-    st.error(f"Lỗi: {e}")
+    st.error(f"Lỗi: {e}. Vui lòng kiểm tra lại file dữ liệu trên GitHub.")
