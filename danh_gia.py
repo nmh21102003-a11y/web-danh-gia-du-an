@@ -5,7 +5,7 @@ import altair as alt
 st.set_page_config(layout="wide")
 st.title("📊 Hệ thống Theo dõi & Đánh giá Thành viên")
 
-# Dòng thông tin giải thích số phiếu
+# Vẫn giữ dòng text để giải thích ý nghĩa của con số 17
 st.info("📌 **Thông tin:** Tổng số phiếu đánh giá tối đa mỗi tuần là 17 phiếu (6 phiếu Nhóm TT + 6 phiếu VPDA + 5 phiếu McK).")
 
 file_url = "https://github.com/nmh21102003-a11y/web-danh-gia-du-an/raw/refs/heads/main/Du_Lieu_Danh_Gia.xlsx"
@@ -41,6 +41,9 @@ try:
         
         df_display = df_long.pivot_table(index=col_tieu_chi, columns='Thành viên', values='Điểm', aggfunc='sum').reset_index()
         cows = df_long[col_tieu_chi].unique().tolist()
+        
+        # Ở tab Tổng hợp, mức max của trục Y = 17 * tổng số tuần đang có
+        max_y = 17 * len(all_sheets)
     else:
         # Chế độ xem từng tuần
         df_raw = all_sheets[selected_option]
@@ -52,14 +55,17 @@ try:
         
         df_display = df_raw.copy()
         cows = df_raw[col_tieu_chi].unique().tolist()
+        
+        # Mức max của trục Y cho từng tuần là 17
+        max_y = 17
 
     def chart(tieu_chi_list, color):
         data = df_long[df_long[col_tieu_chi].isin(tieu_chi_list)].groupby('Thành viên', as_index=False)['Điểm'].sum()
         
         c = alt.Chart(data).mark_bar(size=40).encode(
             x=alt.X('Thành viên:N', sort=fixed_names, axis=alt.Axis(labelAngle=0)),
-            # Khóa cứng domain=[0, 17] để trục Y chỉ hiển thị từ 0 đến 17
-            y=alt.Y('Điểm:Q', scale=alt.Scale(domain=[0, 17]), axis=alt.Axis(format="d", tickMinStep=1)), 
+            # Bổ sung scale=alt.Scale(domain=[0, max_y]) để cố định trục Y
+            y=alt.Y('Điểm:Q', scale=alt.Scale(domain=[0, max_y]), axis=alt.Axis(format="d", tickMinStep=1)), 
             color=alt.value(color)
         ).properties(height=300).interactive()
         st.altair_chart(c, use_container_width=True)
@@ -83,3 +89,4 @@ try:
         st.dataframe(df_display, use_container_width=True, height=300)
 
 except Exception as e:
+    st.error(f"Đang tải dữ liệu, vui lòng đợi hoặc kiểm tra file: {e}")
