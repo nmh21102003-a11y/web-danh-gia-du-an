@@ -2,28 +2,36 @@ import streamlit as st
 import pandas as pd
 import altair as alt
 
+# Cấu hình giao diện
 st.set_page_config(layout="wide")
 st.title("📊 Hệ thống Đánh giá Thành viên")
 
+# Link GitHub (Đảm bảo file đã public trên repo)
 file_url = "https://github.com/nmh21102003-a11y/web-danh-gia-du-an/raw/refs/heads/main/Du_Lieu_Danh_Gia.xlsx"
 
+# Hàm tải dữ liệu
 @st.cache_data(ttl=60)
 def load_data():
+    # Đọc file excel từ URL
     return pd.read_excel(file_url, sheet_name=None)
 
 try:
+    # Lấy dữ liệu
     all_sheets = load_data()
     selected_sheet = st.sidebar.selectbox("Tuần:", list(all_sheets.keys()))
     df_raw = all_sheets[selected_sheet]
-    df = df_raw.iloc[:, 1:]
-    names = df.columns.tolist()
     
+    # Làm sạch dữ liệu: loại bỏ cột unnamed nếu có
+    df_raw = df_raw.loc[:, ~df_raw.columns.str.contains('^Unnamed')]
+    names = df_raw.columns[1:].tolist()
+    
+    # Chuyển dữ liệu sang định dạng long để Altair vẽ
     df_long = df_raw.melt(id_vars=[df_raw.columns[0]], var_name='Thành viên', value_name='Điểm')
     df_long['Điểm'] = pd.to_numeric(df_long['Điểm'], errors='coerce').fillna(0)
 
+    # Hàm vẽ biểu đồ
     def chart(rows, color):
         data = df_long[df_long[df_raw.columns[0]].isin(rows)].groupby('Thành viên', as_index=False)['Điểm'].sum()
-        # padding=0.1 giúp các cột sát nhau hơn
         c = alt.Chart(data).mark_bar(size=40).encode(
             x=alt.X('Thành viên:N', sort=names, axis=alt.Axis(labelAngle=0, padding=0.1)),
             y=alt.Y('Điểm:Q', axis=alt.Axis(format="d", tickMinStep=1)), 
@@ -33,6 +41,7 @@ try:
 
     cows = df_raw.iloc[:, 0].tolist()
 
+    # Hiển thị các mục
     st.subheader("1️⃣ Tiêu chí 1")
     chart([cows[0]], '#3498db')
     st.caption(f"Note: {cows[0]}")
@@ -45,8 +54,9 @@ try:
     chart([cows[2], cows[3]], '#e74c3c')
     st.caption(f"Note: {cows[2]} & {cows[3]}")
 
+    # Bảng chi tiết
     with st.expander("📋 Số liệu chi tiết"):
         st.dataframe(df_raw, use_container_width=True, height=300)
 
-except Exception:
-    st.error("Lỗi dữ liệu! Hãy kiểm tra lại file Excel.")
+except Exception as e:
+    st.error(f"Không thể tải dữ liệu. Chi tiết: {e}")
