@@ -8,17 +8,20 @@ st.markdown("Dữ liệu được trích xuất từ: **Tuần 1**")
 # Hàm đọc và làm sạch dữ liệu
 @st.cache_data
 def load_data(file_path):
-    # Tự động thử các bảng mã tiếng Việt khác nhau để tránh lỗi font
+    # Đọc dữ liệu, tự động bỏ qua các dòng rác gây lỗi ở cuối file (on_bad_lines='skip')
     try:
-        df = pd.read_csv(file_path, skiprows=2, encoding='utf-8')
+        df = pd.read_csv(file_path, skiprows=2, encoding='utf-8', on_bad_lines='skip')
     except Exception:
         try:
-            df = pd.read_csv(file_path, skiprows=2, encoding='cp1258') # Bảng mã Windows VN
+            df = pd.read_csv(file_path, skiprows=2, encoding='cp1258', on_bad_lines='skip')
         except Exception:
-            df = pd.read_csv(file_path, skiprows=2, encoding='latin1')
+            df = pd.read_csv(file_path, skiprows=2, encoding='latin1', on_bad_lines='skip')
+    
+    # Chốt chặt chỉ lấy 4 dòng đầu tiên tương ứng với 4 câu hỏi 
+    df = df.head(4)
     
     # Xử lý tên cột: Xóa dấu xuống dòng (\n) trong tên người
-    df.columns = [col.replace('\n', ' ') for col in df.columns]
+    df.columns = [str(col).replace('\n', ' ') for col in df.columns]
     
     # Điền giá trị 0 cho những ô trống (NaN)
     df = df.fillna(0)
@@ -27,7 +30,7 @@ def load_data(file_path):
     df = df.set_index(df.columns[0])
     return df
 
-# Tên file của bạn 
+# Tên file của bạn (Nếu lúc nãy bạn đã sửa tên file thì nhớ đổi lại dòng này cho khớp nhé)
 file_name = "Phieu_Danh_Gia_Tong_Hop_10_Nguoi.xlsx"
 
 try:
@@ -66,6 +69,6 @@ try:
         st.dataframe(df)
 
 except FileNotFoundError:
-    st.error(f"Không tìm thấy file `{file_name}`. Hãy kiểm tra lại xem tên file có giống hệt file trong thư mục không nhé.")
+    st.error(f"Không tìm thấy file `{file_name}`. Hãy kiểm tra lại xem tên file có giống hệt file trên GitHub không nhé.")
 except Exception as e:
     st.error(f"Có lỗi xảy ra: {e}")
