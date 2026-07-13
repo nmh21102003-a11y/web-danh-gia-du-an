@@ -20,20 +20,20 @@ try:
     # Xử lý dữ liệu
     df_raw = df_raw.loc[:, ~df_raw.columns.str.contains('^Unnamed')]
     col_cau_hoi = df_raw.columns[0]
-    # Lấy danh sách tên thành viên gốc từ Excel để khóa thứ tự
     danh_sach_thanh_vien = df_raw.columns[1:].tolist()
     
+    # Tạo bảng dữ liệu tổng hợp
     df_long = df_raw.melt(id_vars=[col_cau_hoi], var_name='Thành viên', value_name='Điểm')
     df_long['Điểm'] = pd.to_numeric(df_long['Điểm'], errors='coerce').fillna(0)
 
     st.header(f"📌 Tuần: {selected_sheet}")
     st.write("---")
 
-    # Hàm vẽ biểu đồ với Altair
+    # Hàm vẽ biểu đồ chuẩn
     def ve_bieu_do(cau_hoi_list, tieu_de, mau_sac):
-        df_plot = df_long[df_long[col_cau_hoi].isin(cau_hoi_list)]
+        # Nếu là nhóm Câu 3 & 4, ta cộng điểm lại
+        df_plot = df_long[df_long[col_cau_hoi].isin(cau_hoi_list)].groupby('Thành viên', as_index=False)['Điểm'].sum()
         
-        # SỬA Ở ĐÂY: Loại bỏ xOffset và logic đặc biệt, để giống hệt biểu đồ 1 và 2
         chart = alt.Chart(df_plot).mark_bar().encode(
             x=alt.X('Thành viên:N', sort=danh_sach_thanh_vien, axis=alt.Axis(labelAngle=0, bandPosition=0.5)),
             y=alt.Y('Điểm:Q', axis=alt.Axis(format="d")),
@@ -41,8 +41,7 @@ try:
         ).properties(width=1000, height=300).interactive()
         
         st.subheader(tieu_de)
-        st.info(f"💡 {cau_hoi_list[0]}")
-            
+        st.info(f"💡 {tieu_de}")
         st.altair_chart(chart, use_container_width=False)
 
     danh_sach_cau = df_raw[col_cau_hoi].tolist()
@@ -51,9 +50,8 @@ try:
     ve_bieu_do([danh_sach_cau[0]], f"1️⃣ {danh_sach_cau[0]}", '#3498db')
     ve_bieu_do([danh_sach_cau[1]], f"2️⃣ {danh_sach_cau[1]}", '#3498db')
     
-    # Bảng 3: Hiển thị tách biệt từng câu, mỗi câu là 1 biểu đồ chuẩn giống bảng 1,2
-    ve_bieu_do([danh_sach_cau[2]], f"3️⃣ {danh_sach_cau[2]}", '#3498db')
-    ve_bieu_do([danh_sach_cau[3]], f"4️⃣ {danh_sach_cau[3]}", '#3498db')
+    # Bảng 3: Gộp cả câu 3 và 4 vào đây
+    ve_bieu_do([danh_sach_cau[2], danh_sach_cau[3]], "3️⃣ & 4️⃣ Tiêu chí kết hợp", '#3498db')
 
     st.write("---")
     with st.expander("📋 Xem Bảng Số Liệu Chi Tiết"):
