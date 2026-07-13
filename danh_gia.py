@@ -21,27 +21,28 @@ try:
     col_cau_hoi = df_raw.columns[0]
     danh_sach_thanh_vien = df_raw.columns[1:].tolist()
     
+    # Chuyển dữ liệu sang dạng dài để vẽ biểu đồ
     df_long = df_raw.melt(id_vars=[col_cau_hoi], var_name='Thành viên', value_name='Điểm')
     df_long['Điểm'] = pd.to_numeric(df_long['Điểm'], errors='coerce').fillna(0)
 
     st.header(f"📌 Tuần: {selected_sheet}")
     st.write("---")
 
-    # Hàm vẽ chung cho tất cả các loại biểu đồ
+    # Hàm vẽ biểu đồ chuyên nghiệp
     def ve_bieu_do(cau_hoi_list, tieu_de, mau_sac):
         df_plot = df_long[df_long[col_cau_hoi].isin(cau_hoi_list)]
         
         # Cấu hình biểu đồ
         chart = alt.Chart(df_plot).mark_bar().encode(
-            # X ép hiển thị đủ tất cả các thành viên (domain)
-            x=alt.X('Thành viên:N', sort=danh_sach_thanh_vien, axis=alt.Axis(labelAngle=0)),
+            # bandPosition=0.5 giúp căn giữa biểu đồ so với tên
+            x=alt.X('Thành viên:N', sort=danh_sach_thanh_vien, axis=alt.Axis(labelAngle=0, bandPosition=0.5)),
             y=alt.Y('Điểm:Q', axis=alt.Axis(format="d")),
             color=alt.value(mau_sac),
             xOffset=f'{col_cau_hoi}:N' # Tách cột cạnh nhau nếu là 2 câu
         ).properties(width=1000, height=300).interactive()
         
         st.subheader(tieu_de)
-        if mau_sac == '#e74c3c': # Nếu là câu tiêu cực
+        if mau_sac == '#e74c3c': # Màu đỏ cho các tiêu chí tiêu cực
             st.warning(f"⚠️ {', '.join(cau_hoi_list)}")
         else:
             st.info(f"💡 {cau_hoi_list[0]}")
@@ -50,7 +51,7 @@ try:
 
     danh_sach_cau = df_raw[col_cau_hoi].tolist()
 
-    # Hiển thị
+    # Hiển thị các biểu đồ
     ve_bieu_do([danh_sach_cau[0]], "1️⃣ Tiêu chí Câu 1", '#3498db')
     ve_bieu_do([danh_sach_cau[1]], "2️⃣ Tiêu chí Câu 2", '#3498db')
     ve_bieu_do([danh_sach_cau[2], danh_sach_cau[3]], "3️⃣ & 4️⃣ Tiêu chí tiêu cực", '#e74c3c')
@@ -60,4 +61,4 @@ try:
         st.dataframe(df_raw, use_container_width=True)
 
 except Exception as e:
-    st.error(f"Lỗi: {e}")
+    st.error(f"Lỗi: {e}. Vui lòng kiểm tra lại cấu trúc file Excel.")
