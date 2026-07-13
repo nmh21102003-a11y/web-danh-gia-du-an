@@ -18,7 +18,7 @@ def load_data(file_path):
     df = df.set_index(df.columns[0])
     return df
 
-file_name = "Phieu_Danh_Gia_Tong_Hop_10_Nguoi.xlsx"
+file_name = "Phieu_Danh_Gia_Tong_Hop_10_Nguoi.xlsx - Phiếu Đánh Giá Tổng Hợp Tuần 1.csv"
 
 try:
     df = load_data(file_name)
