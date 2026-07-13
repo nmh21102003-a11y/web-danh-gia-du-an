@@ -23,10 +23,10 @@ try:
 
     def chart(rows, color):
         data = df_long[df_long[df_raw.columns[0]].isin(rows)].groupby('Thành viên', as_index=False)['Điểm'].sum()
-        # Thêm tickMinStep=2 để buộc trục Y nhảy bước số chẵn (0, 2, 4, 6...)
+        # tickMinStep=1 đảm bảo trục tung chỉ hiển thị số nguyên 0, 1, 2, 3, 4...
         c = alt.Chart(data).mark_bar(size=30).encode(
             x=alt.X('Thành viên:N', sort=names, axis=alt.Axis(labelAngle=0)),
-            y=alt.Y('Điểm:Q', axis=alt.Axis(format="d", tickMinStep=2)), 
+            y=alt.Y('Điểm:Q', axis=alt.Axis(format="d", tickMinStep=1)), 
             color=alt.value(color)
         ).properties(height=300).interactive()
         st.altair_chart(c, use_container_width=True)
