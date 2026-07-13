@@ -3,7 +3,7 @@ import pandas as pd
 import altair as alt
 
 st.set_page_config(layout="wide")
-st.title("📊 Hệ thống Theo dõi Tiến độ & Đánh giá Horizon")
+st.title("📊 Bảng Theo dõi & Đánh giá Thành viên")
 
 file_name = "Du_Lieu_Danh_Gia.xlsx"
 
