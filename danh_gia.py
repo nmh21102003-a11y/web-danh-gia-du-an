@@ -40,17 +40,17 @@ try:
 
     cows = df_raw.iloc[:, 0].tolist()
 
-    # Hiển thị các mục (Note nằm dưới tiêu đề)
+    # Hiển thị các mục
     st.subheader("1️⃣ Tiêu chí 1")
-    st.caption(f"**Nội dung:** {cows[0]}")
+    st.caption(f"{cows[0]}")
     chart([cows[0]], '#3498db')
     
     st.subheader("2️⃣ Tiêu chí 2")
-    st.caption(f"**Nội dung:** {cows[1]}")
+    st.caption(f"{cows[1]}")
     chart([cows[1]], '#3498db')
     
     st.subheader("3️⃣ Tiêu chí tiêu cực")
-    st.caption(f"**Nội dung:** {cows[2]} & {cows[3]}")
+    st.caption(f"{cows[2]} & {cows[3]}")
     chart([cows[2], cows[3]], '#e74c3c')
 
     # Bảng chi tiết
