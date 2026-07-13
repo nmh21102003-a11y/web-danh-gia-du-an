@@ -22,16 +22,15 @@ try:
     col_cau_hoi = df_raw.columns[0]
     danh_sach_thanh_vien = df_raw.columns[1:].tolist()
     
-    # Tạo bảng dữ liệu tổng hợp
     df_long = df_raw.melt(id_vars=[col_cau_hoi], var_name='Thành viên', value_name='Điểm')
     df_long['Điểm'] = pd.to_numeric(df_long['Điểm'], errors='coerce').fillna(0)
 
     st.header(f"📌 Tuần: {selected_sheet}")
     st.write("---")
 
-    # Hàm vẽ biểu đồ chuẩn
+    # Hàm vẽ biểu đồ với Altair
     def ve_bieu_do(cau_hoi_list, tieu_de, mau_sac):
-        # Nếu là nhóm Câu 3 & 4, ta cộng điểm lại
+        # Tính tổng điểm cho nhóm câu hỏi nếu có nhiều câu
         df_plot = df_long[df_long[col_cau_hoi].isin(cau_hoi_list)].groupby('Thành viên', as_index=False)['Điểm'].sum()
         
         chart = alt.Chart(df_plot).mark_bar().encode(
@@ -41,7 +40,9 @@ try:
         ).properties(width=1000, height=300).interactive()
         
         st.subheader(tieu_de)
-        st.info(f"💡 {tieu_de}")
+        # Hiển thị nội dung chi tiết các câu hỏi
+        st.info(f"💡 {' + '.join(cau_hoi_list)}")
+            
         st.altair_chart(chart, use_container_width=False)
 
     danh_sach_cau = df_raw[col_cau_hoi].tolist()
@@ -50,8 +51,8 @@ try:
     ve_bieu_do([danh_sach_cau[0]], f"1️⃣ {danh_sach_cau[0]}", '#3498db')
     ve_bieu_do([danh_sach_cau[1]], f"2️⃣ {danh_sach_cau[1]}", '#3498db')
     
-    # Bảng 3: Gộp cả câu 3 và 4 vào đây
-    ve_bieu_do([danh_sach_cau[2], danh_sach_cau[3]], "3️⃣ & 4️⃣ Tiêu chí kết hợp", '#3498db')
+    # Bảng 3 & 4 gộp: Tiêu đề rõ ràng gồm cả 2 câu hỏi
+    ve_bieu_do([danh_sach_cau[2], danh_sach_cau[3]], "3️⃣ & 4️⃣ Tổng hợp", '#3498db')
 
     st.write("---")
     with st.expander("📋 Xem Bảng Số Liệu Chi Tiết"):
