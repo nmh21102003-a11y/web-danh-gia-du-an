@@ -16,7 +16,6 @@ try:
     df_raw = all_sheets[selected_sheet]
 
     # --- 1. XỬ LÝ DỮ LIỆU ---
-    # Bỏ cột rác, xoay bảng để Thành viên làm trục ngang
     df_raw = df_raw.loc[:, ~df_raw.columns.str.contains('^Unnamed')]
     col_cau_hoi = df_raw.columns[0]
     
@@ -47,8 +46,8 @@ try:
     # CHART 2: Câu 2
     ve_bieu_do("2️⃣ Tiêu chí Câu 2", noi_dung_cau_hoi[1], df_numeric[['Câu 2']])
 
-    # CHART 3: Gộp Câu 3 & Câu 4
-    ve_bieu_do("3️⃣ So sánh Câu 3 & Câu 4", f"{noi_dung_cau_hoi[2]} & {noi_dung_cau_hoi[3]}", df_numeric[['Câu 3', 'Câu 4']])
+    # CHART 3: Gộp Câu 3 & Câu 4 (Tiêu đề mới theo yêu cầu)
+    ve_bieu_do("3️⃣ Tiêu chí Câu 3 & Câu 4", f"{noi_dung_cau_hoi[2]} & {noi_dung_cau_hoi[3]}", df_numeric[['Câu 3', 'Câu 4']])
 
     # --- BẢNG DỮ LIỆU ---
     st.write("---")
@@ -56,4 +55,4 @@ try:
         st.dataframe(df_numeric, use_container_width=True)
 
 except Exception as e:
-    st.error(f"Lỗi: {e}. Hãy kiểm tra xem file Excel của bạn có đủ 4 dòng câu hỏi không nhé!")
+    st.error(f"Lỗi: {e}. Vui lòng kiểm tra lại file Excel.")
