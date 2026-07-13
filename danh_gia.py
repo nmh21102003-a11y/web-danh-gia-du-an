@@ -5,7 +5,8 @@ import altair as alt
 st.set_page_config(layout="wide")
 st.title("📊 Hệ thống Theo dõi & Đánh giá Thành viên")
 
-# Vẫn giữ dòng text để giải thích ý nghĩa của con số 17
+# Hiển thị dòng thông tin giải thích số phiếu ở đầu trang
+st.info("📌 **Thông tin:** Tổng số phiếu đánh giá tối đa mỗi tuần là 17 phiếu (6 phiếu Nhóm TT + 6 phiếu VPDA + 5 phiếu McK).")
 
 file_url = "https://github.com/nmh21102003-a11y/web-danh-gia-du-an/raw/refs/heads/main/Du_Lieu_Danh_Gia.xlsx"
 
@@ -13,7 +14,7 @@ file_url = "https://github.com/nmh21102003-a11y/web-danh-gia-du-an/raw/refs/head
 def load_data():
     return pd.read_excel(file_url, sheet_name=None)
 
-# THỨ TỰ TÊN CỐ ĐỊNH THEO YÊU CẦU CỦA SẾP
+# THỨ TỰ TÊN CỐ ĐỊNH THEO YÊU CẦU CỦA SẾP (Nhóm TT trước -> Nhóm VP DA sau)
 fixed_names = [
     "Nguyễn Tuấn Vinh", "Trần Trang Thảo", "Lưu Hoàng Minh", "Nguyễn Lê Huy", "Mai Việt Dũng",
     "Trần Quý Giáp", "Lê Danh Toàn", "Hoàng Ngọc Bích", "Đỗ Trung Hiếu", "Đỗ Thành Long"
@@ -58,12 +59,16 @@ try:
         # Mức max của trục Y cho từng tuần là 17
         max_y = 17
 
+    # SẮP XẾP LẠI THỨ TỰ CỘT TRONG BẢNG SỐ LIỆU CHI TIẾT THEO FIXED_NAMES
+    match_cols = [col for col in fixed_names if col in df_display.columns]
+    other_cols = [col for col in df_display.columns if col != col_tieu_chi and col not in fixed_names]
+    df_display = df_display[[col_tieu_chi] + match_cols + other_cols]
+
     def chart(tieu_chi_list, color):
         data = df_long[df_long[col_tieu_chi].isin(tieu_chi_list)].groupby('Thành viên', as_index=False)['Điểm'].sum()
         
         c = alt.Chart(data).mark_bar(size=40).encode(
             x=alt.X('Thành viên:N', sort=fixed_names, axis=alt.Axis(labelAngle=0)),
-            # Bổ sung scale=alt.Scale(domain=[0, max_y]) để cố định trục Y
             y=alt.Y('Điểm:Q', scale=alt.Scale(domain=[0, max_y]), axis=alt.Axis(format="d", tickMinStep=1)), 
             color=alt.value(color)
         ).properties(height=300).interactive()
@@ -71,21 +76,3 @@ try:
 
     if len(cows) > 0:
         st.subheader("1️⃣ Tiêu chí 01")
-        st.caption(f"{cows[0]}")
-        chart([cows[0]], '#3498db')
-        
-    if len(cows) > 1:
-        st.subheader("2️⃣ Tiêu chí 02")
-        st.caption(f"{cows[1]}")
-        chart([cows[1]], '#3498db')
-        
-    if len(cows) > 2:
-        st.subheader("3️⃣ & 4️⃣ Tiêu chí Tiêu cực")
-        st.caption(" & ".join(cows[2:]))
-        chart(cows[2:], '#e74c3c')
-
-    with st.expander("📋 Số liệu chi tiết"):
-        st.dataframe(df_display, use_container_width=True, height=300)
-
-except Exception as e:
-    st.error(f"Đang tải dữ liệu, vui lòng đợi hoặc kiểm tra file: {e}")
