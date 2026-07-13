@@ -27,13 +27,12 @@ try:
     df_long = df_raw.melt(id_vars=[df_raw.columns[0]], var_name='Thành viên', value_name='Điểm')
     df_long['Điểm'] = pd.to_numeric(df_long['Điểm'], errors='coerce').fillna(0)
 
-    # Hàm vẽ biểu đồ
+    # Hàm vẽ biểu đồ (Cấu hình chuẩn, ổn định)
     def chart(rows, color):
         data = df_long[df_long[df_raw.columns[0]].isin(rows)].groupby('Thành viên', as_index=False)['Điểm'].sum()
         
-        # bandPadding=0.1 giúp các cột sát nhau, thay thế cho lỗi padding cũ
         c = alt.Chart(data).mark_bar(size=40).encode(
-            x=alt.X('Thành viên:N', sort=names, axis=alt.Axis(labelAngle=0, bandPadding=0.1)),
+            x=alt.X('Thành viên:N', sort=names, axis=alt.Axis(labelAngle=0)),
             y=alt.Y('Điểm:Q', axis=alt.Axis(format="d", tickMinStep=1)), 
             color=alt.value(color)
         ).properties(height=300).interactive()
@@ -59,4 +58,4 @@ try:
         st.dataframe(df_raw, use_container_width=True, height=300)
 
 except Exception as e:
-    st.error(f"Lỗi dữ liệu: {e}")
+    st.error(f"Đang tải dữ liệu, vui lòng đợi hoặc kiểm tra file: {e}")
