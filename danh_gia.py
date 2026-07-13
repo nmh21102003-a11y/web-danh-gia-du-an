@@ -18,15 +18,13 @@ try:
     # --- 1. XỬ LÝ DỮ LIỆU ---
     df_raw = df_raw.loc[:, ~df_raw.columns.str.contains('^Unnamed')]
     col_cau_hoi = df_raw.columns[0]
-    
-    # Lấy nội dung câu hỏi để làm chú thích
     noi_dung_cau_hoi = df_raw.set_index(col_cau_hoi).index.tolist()
     
-    # Xoay bảng
+    # Xoay bảng để Thành viên nằm ở trục X (ngang)
     df = df_raw.set_index(col_cau_hoi).T
     df.index.name = "Thành viên"
     
-    # Đổi tên cột ngắn gọn để vẽ biểu đồ
+    # Đặt tên cột ngắn gọn để tránh biểu đồ bị rối
     df.columns = [f"Câu {i+1}" for i in range(len(df.columns))]
     df_numeric = df.apply(pd.to_numeric, errors='coerce').fillna(0)
 
@@ -34,25 +32,25 @@ try:
     st.header(f"📌 Tuần Đánh Giá: {selected_sheet}")
     st.write("---")
 
-    # Hàm vẽ biểu đồ với chú thích phía trên
+    # Hàm hiển thị biểu đồ
     def ve_bieu_do(tieu_de, noi_dung, du_lieu):
         st.subheader(tieu_de)
-        st.info(f"💡 Nội dung: {noi_dung}")
+        st.info(f"💡 Tiêu chí: {noi_dung}")
+        # Lệnh bar_chart mặc định của Streamlit sẽ tự động để tên nằm ngang
         st.bar_chart(du_lieu)
 
-    # CHART 1: Câu 1
+    # CHART 1
     ve_bieu_do("1️⃣ Tiêu chí Câu 1", noi_dung_cau_hoi[0], df_numeric[['Câu 1']])
 
-    # CHART 2: Câu 2
+    # CHART 2
     ve_bieu_do("2️⃣ Tiêu chí Câu 2", noi_dung_cau_hoi[1], df_numeric[['Câu 2']])
 
-    # CHART 3: Gộp Câu 3 & Câu 4 (Tiêu đề mới theo yêu cầu)
+    # CHART 3
     ve_bieu_do("3️⃣ Tiêu chí Câu 3 & Câu 4", f"{noi_dung_cau_hoi[2]} & {noi_dung_cau_hoi[3]}", df_numeric[['Câu 3', 'Câu 4']])
 
-    # --- BẢNG DỮ LIỆU ---
     st.write("---")
     with st.expander("📋 Xem Bảng Số Liệu Chi Tiết"):
         st.dataframe(df_numeric, use_container_width=True)
 
 except Exception as e:
-    st.error(f"Lỗi: {e}. Vui lòng kiểm tra lại file Excel.")
+    st.error(f"Lỗi: {e}. Vui lòng kiểm tra file Excel.")
