@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
 
 st.set_page_config(layout="wide")
 st.title("📊 Bảng Điều Khiển Đánh Giá Chi Tiết")
@@ -17,78 +16,53 @@ try:
     df = all_sheets[selected_sheet]
 
     # --- CHUẨN BỊ DỮ LIỆU ---
+    # Bỏ cột rác do Excel tự sinh ra
     df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
+    
+    # Lấy cột đầu tiên (Thành viên) làm trục ngang (Trục X) cho toàn bộ biểu đồ
     col_thanh_vien = df.columns[0]
     df = df.set_index(col_thanh_vien)
     
-    # Rút gọn tên cột (lấy phần chữ trước dấu hai chấm)
+    # Rút gọn tên câu hỏi cho biểu đồ gọn gàng
     df.columns = [str(col).split(':')[0].strip() if ':' in str(col) else str(col) for col in df.columns]
     
-    # Lấy các cột số liệu
+    # Ép dữ liệu về dạng số học chuẩn để không bị lỗi sập hệ thống (Segmentation fault)
     df_numeric = df.apply(pd.to_numeric, errors='coerce').fillna(0)
     cols = df_numeric.columns.tolist()
 
+    # Kiểm tra đảm bảo có đủ 4 cột điểm để vẽ
     if len(cols) >= 4:
         c1, c2, c3, c4 = cols[0], cols[1], cols[2], cols[3]
         
-        st.header(f"Phân tích Tuần: {selected_sheet}")
+        st.header(f"📌 Dữ liệu: {selected_sheet}")
         st.write("---")
 
         # ==========================================
-        # CHART 1: CÂU 1 (Biểu đồ Cột dọc - Đứng chung sân)
+        # CHART 1: CÂU 1 (Biểu đồ Cột hiển thị toàn bộ thành viên)
         # ==========================================
-        st.subheader(f"1️⃣ {c1}")
-        fig1, ax1 = plt.subplots(figsize=(12, 4))
-        ax1.bar(df_numeric.index, df_numeric[c1], color='#4C72B0', width=0.5)
-        
-        ax1.spines[['top', 'right']].set_visible(False)
-        ax1.set_ylabel("Điểm số")
-        # Xoay nghiêng tên thành viên để không bị đè lên nhau
-        plt.xticks(rotation=45, ha='right') 
-        st.pyplot(fig1)
-
-        st.write("---")
+        st.subheader(f"1️⃣ Điểm tiêu chí: {c1}")
+        st.bar_chart(df_numeric[[c1]]) 
 
         # ==========================================
-        # CHART 2: CÂU 2 (Biểu đồ Đường - Line Chart)
+        # CHART 2: CÂU 2 (Biểu đồ Đường hiển thị toàn bộ thành viên)
         # ==========================================
-        st.subheader(f"2️⃣ {c2}")
-        fig2, ax2 = plt.subplots(figsize=(12, 4))
-        # Nối điểm các thành viên bằng đường kẻ
-        ax2.plot(df_numeric.index, df_numeric[c2], marker='o', color='#E67E22', linewidth=2, markersize=8)
-        
-        ax2.spines[['top', 'right']].set_visible(False)
-        ax2.set_ylabel("Điểm số")
-        plt.xticks(rotation=45, ha='right')
-        # Thêm lưới mờ ngang để dễ dóng điểm
-        ax2.grid(axis='y', linestyle='--', alpha=0.5) 
-        st.pyplot(fig2)
-
-        st.write("---")
+        st.subheader(f"2️⃣ Điểm tiêu chí: {c2}")
+        st.line_chart(df_numeric[[c2]])
 
         # ==========================================
-        # CHART 3: CÂU 3 & CÂU 4 (Biểu đồ Cột chồng Dọc)
+        # CHART 3: CÂU 3 & CÂU 4 (Gộp chung vào 1 biểu đồ)
         # ==========================================
-        st.subheader(f"3️⃣ Tổng hợp: {c3} & {c4}")
-        fig3, ax3 = plt.subplots(figsize=(12, 5))
-        
-        # Gộp 2 điểm thành 1 cột dựng đứng
-        df_numeric[[c3, c4]].plot(kind='bar', stacked=True, ax=ax3, color=['#2ECC71', '#9B59B6'], width=0.5)
-        
-        ax3.spines[['top', 'right']].set_visible(False)
-        ax3.set_ylabel("Tổng Điểm")
-        ax3.set_xlabel("") # Xóa chữ "Thành viên" mặc định cho đỡ vướng
-        plt.xticks(rotation=45, ha='right')
-        
-        ax3.legend(bbox_to_anchor=(1.0, 1.05))
-        st.pyplot(fig3)
+        st.subheader(f"3️⃣ So sánh tiêu chí: {c3} & {c4}")
+        # Truyền cả 2 cột vào, Streamlit sẽ tự động vẽ 2 màu khác nhau trên cùng 1 biểu đồ
+        st.bar_chart(df_numeric[[c3, c4]])
 
     else:
-        st.warning("File Excel của bạn cần có ít nhất 4 cột tiêu chí để hiển thị đủ biểu đồ.")
+        st.warning("File Excel cần ít nhất 4 cột tiêu chí đánh giá để hiển thị đủ các biểu đồ này.")
         
+    # --- BẢNG DỮ LIỆU ---
     st.write("---")
-    with st.expander("📋 Xem toàn bộ bảng dữ liệu gốc"):
-        st.dataframe(df_numeric.astype(str), use_container_width=True)
+    with st.expander("📋 Xem Bảng Số Liệu Chi Tiết"):
+        st.dataframe(df_numeric, use_container_width=True)
 
 except Exception as e:
     st.error(f"Lỗi: {e}")
