@@ -1,8 +1,6 @@
 import streamlit as st
 import pandas as pd
-import altair as alt
 
-# Cấu hình trang
 st.set_page_config(layout="wide")
 st.title("📊 Hệ thống Theo dõi & Đánh giá Thành viên")
 
@@ -20,50 +18,39 @@ try:
     # Xử lý dữ liệu
     df_raw = df_raw.loc[:, ~df_raw.columns.str.contains('^Unnamed')]
     col_cau_hoi = df_raw.columns[0]
-    # Lấy danh sách tên thành viên gốc từ Excel để khóa thứ tự
-    danh_sach_thanh_vien = df_raw.columns[1:].tolist()
     
-    df_long = df_raw.melt(id_vars=[col_cau_hoi], var_name='Thành viên', value_name='Điểm')
-    df_long['Điểm'] = pd.to_numeric(df_long['Điểm'], errors='coerce').fillna(0)
+    # Chuyển đổi để lấy các cột dữ liệu theo đúng thứ tự
+    df = df_raw.set_index(col_cau_hoi).T
+    df.index.name = "Thành viên"
+    df = df.apply(pd.to_numeric, errors='coerce').fillna(0)
 
     st.header(f"📌 Tuần: {selected_sheet}")
     st.write("---")
 
-    # Hàm vẽ biểu đồ với Altair
-    def ve_bieu_do(cau_hoi_list, tieu_de, mau_sac):
-        df_plot = df_long[df_long[col_cau_hoi].isin(cau_hoi_list)]
-        
-        # Nếu là nhóm Câu 3 & 4 (có nhiều hơn 1 câu hỏi), gán màu theo từng câu để phân biệt
-        # Nếu là câu đơn, giữ nguyên màu mau_sac
-        chart = alt.Chart(df_plot).mark_bar().encode(
-            x=alt.X('Thành viên:N', sort=danh_sach_thanh_vien, axis=alt.Axis(labelAngle=0, bandPosition=0.5)),
-            y=alt.Y('Điểm:Q', axis=alt.Axis(format="d")),
-            # Logic: Nếu là nhóm Câu 3&4 thì dùng màu đỏ phân biệt, nếu là câu đơn thì dùng màu xanh
-            color=alt.Color(f'{col_cau_hoi}:N', scale=alt.Scale(range=['#e74c3c', '#c0392b'])) if len(cau_hoi_list) > 1 else alt.value(mau_sac),
-            xOffset=f'{col_cau_hoi}:N' if len(cau_hoi_list) > 1 else alt.value(0)
-        ).properties(width=1000, height=300).interactive()
-        
-        st.subheader(tieu_de)
-        if len(cau_hoi_list) > 1: 
-            st.warning(f"⚠️ {', '.join(cau_hoi_list)}")
-        else:
-            st.info(f"💡 {cau_hoi_list[0]}")
-            
-        st.altair_chart(chart, use_container_width=False)
+    # Hiển thị Câu 1
+    st.subheader(f"1️⃣ {df_raw.iloc[0, 0]}")
+    st.bar_chart(df.iloc[:, [0]], use_container_width=True)
 
-    danh_sach_cau = df_raw[col_cau_hoi].tolist()
+    # Hiển thị Câu 2
+    st.subheader(f"2️⃣ {df_raw.iloc[1, 0]}")
+    st.bar_chart(df.iloc[:, [1]], use_container_width=True)
 
-    # Hiển thị
-    # Bảng 1 & 2 giữ nguyên
-    ve_bieu_do([danh_sach_cau[0]], f"1️⃣ {danh_sach_cau[0]}", '#3498db')
-    ve_bieu_do([danh_sach_cau[1]], f"2️⃣ {danh_sach_cau[1]}", '#3498db')
+    # Hiển thị Bảng 3: Gộp Câu 3 & 4
+    # Để có màu đỏ và kiểu dáng y hệt bảng 2, chúng ta dùng st.bar_chart
+    # Với các cột Câu 3 và Câu 4
+    st.subheader("3️⃣ & 4️⃣ Tiêu chí tiêu cực")
+    st.warning(f"⚠️ {df_raw.iloc[2, 0]} & {df_raw.iloc[3, 0]}")
     
-    # Bảng 3 (Gộp 3 & 4) hiển thị màu đỏ
-    ve_bieu_do([danh_sach_cau[2], danh_sach_cau[3]], "3️⃣ & 4️⃣ Tiêu chí tiêu cực", '#e74c3c')
+    # Lấy dữ liệu câu 3 và 4
+    df_chart_34 = df.iloc[:, [2, 3]]
+    # Đổi tên cột để biểu đồ hiển thị đẹp
+    df_chart_34.columns = [df_raw.iloc[2, 0], df_raw.iloc[3, 0]]
+    
+    st.bar_chart(df_chart_34, use_container_width=True)
 
     st.write("---")
     with st.expander("📋 Xem Bảng Số Liệu Chi Tiết"):
-        st.dataframe(df_raw, use_container_width=True)
+        st.dataframe(df, use_container_width=True)
 
 except Exception as e:
     st.error(f"Lỗi: {e}")
