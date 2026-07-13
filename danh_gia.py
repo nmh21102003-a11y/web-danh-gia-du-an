@@ -19,7 +19,7 @@ try:
     df_raw = df_raw.loc[:, ~df_raw.columns.str.contains('^Unnamed')]
     col_cau_hoi = df_raw.columns[0]
     
-    # Giữ nguyên cấu trúc dữ liệu để vẽ bảng
+    # Chuyển đổi để lấy các cột dữ liệu theo đúng thứ tự
     df = df_raw.set_index(col_cau_hoi).T
     df.index.name = "Thành viên"
     df = df.apply(pd.to_numeric, errors='coerce').fillna(0)
@@ -27,23 +27,25 @@ try:
     st.header(f"📌 Tuần: {selected_sheet}")
     st.write("---")
 
-    # Hiển thị bảng 1 (Dữ liệu nguyên bản)
+    # --- HIỂN THỊ CÁC BẢNG ---
+    
+    # Bảng 1: Hiển thị đúng tiêu đề + biểu đồ
     st.subheader(f"1️⃣ {df_raw.iloc[0, 0]}")
     st.bar_chart(df.iloc[:, [0]], use_container_width=True)
 
-    # Hiển thị bảng 2 (Dữ liệu nguyên bản)
+    # Bảng 2: Hiển thị đúng tiêu đề + biểu đồ
     st.subheader(f"2️⃣ {df_raw.iloc[1, 0]}")
     st.bar_chart(df.iloc[:, [1]], use_container_width=True)
 
-    # Hiển thị bảng 3 (Gộp Câu 3 & 4)
-    # Dữ liệu Câu 3 là cột index 2, Câu 4 là cột index 3 trong df
+    # Bảng 3 (Gộp Câu 3 & 4): Hiển thị tiêu đề + cảnh báo + biểu đồ gộp
     st.subheader("3️⃣ & 4️⃣ Tiêu chí tiêu cực")
     st.warning(f"⚠️ {df_raw.iloc[2, 0]} & {df_raw.iloc[3, 0]}")
     st.bar_chart(df.iloc[:, [2, 3]], use_container_width=True)
 
+    # --- BẢNG CHI TIẾT ---
     st.write("---")
     with st.expander("📋 Xem Bảng Số Liệu Chi Tiết"):
         st.dataframe(df, use_container_width=True)
 
 except Exception as e:
-    st.error(f"Lỗi: {e}")
+    st.error(f"Lỗi: {e}. Vui lòng kiểm tra file dữ liệu.")
