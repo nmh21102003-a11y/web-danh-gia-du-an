@@ -5,6 +5,7 @@ import altair as alt
 st.set_page_config(layout="wide")
 st.title("📈 Dashboard Đánh Giá Tổng Hợp Năng Lực Dự Án")
 
+# Dữ liệu nguồn
 file_url = "https://github.com/nmh21102003-a11y/web-danh-gia-du-an/raw/refs/heads/main/Du_Lieu_Danh_Gia.xlsx"
 
 @st.cache_data(ttl=60)
@@ -21,19 +22,18 @@ def clean_sheet(sheet):
     df.columns = df.columns.str.replace('\n', ' ').str.replace('\r', '').str.strip()
     return df
 
-# Hàm vẽ biểu đồ: Các tiêu chí từ thứ 3 trở đi sẽ hiển thị giá trị âm
+# Hàm vẽ biểu đồ với logic 4 tiêu chí (2 đầu dương, 2 cuối âm)
 def plot_stacked_chart(df_long, list_cows, col_tc):
     df_chart = df_long.copy()
-    
-    # Logic: Nếu có từ 3 tiêu chí trở lên, tiêu chí 3+ sẽ bị nhân -1 để nằm phía dưới trục 0
-    if len(list_cows) > 2:
-        tieu_cuc = list_cows[2:]
+    # Logic: Tiêu chí 3 và 4 (vị trí index 2, 3) sẽ hiển thị số âm
+    if len(list_cows) >= 4:
+        tieu_cuc = list_cows[2:] # Lấy từ tiêu chí 3 trở đi
         df_chart.loc[df_chart[col_tc].isin(tieu_cuc), 'Điểm'] *= -1
     
     return alt.Chart(df_chart).mark_bar(size=40).encode(
         x=alt.X('Thành viên:N', sort=fixed_names, axis=alt.Axis(labelAngle=0)),
         y=alt.Y('Điểm:Q', title="Số phiếu (Dương: Tốt | Âm: Cảnh báo)"),
-        color=alt.Color(f'{col_tc}:N', legend=alt.Legend(title="Tiêu chí", orient='bottom', labelLimit=800)),
+        color=alt.Color(f'{col_tc}:N', legend=alt.Legend(title="4 Tiêu chí", orient='bottom', labelLimit=800)),
         tooltip=['Thành viên', f'{col_tc}', 'Điểm']
     ).properties(height=500).interactive()
 
@@ -41,7 +41,7 @@ try:
     all_sheets = load_data()
     tab1, tab2, tab3 = st.tabs(["📅 Đánh Giá Từng Tuần", "📈 Tổng Hợp Cả Quá Trình", "👤 Xu Hướng Cá Nhân"])
     
-    note_text = "📌 **Ghi chú:** Tổng số phiếu tối đa mỗi tuần cho từng thành viên là 17 phiếu. Các tiêu chí từ thứ 3 trở đi hiển thị âm là các tiêu chí cảnh báo."
+    note_text = "📌 **Ghi chú:** 2 tiêu chí đầu là Đóng góp (Dương), 2 tiêu chí cuối là Cảnh báo (Âm). Tối đa 17 phiếu/thành viên/tuần."
 
     with tab1:
         selected_week = st.selectbox("Chọn Tuần:", list(all_sheets.keys()))
@@ -59,7 +59,6 @@ try:
         col_tc_agg = df_agg_raw.columns[0]
         df_agg_long = df_agg_raw.melt(id_vars=[col_tc_agg], var_name='Thành viên', value_name='Điểm')
         df_agg_long['Điểm'] = pd.to_numeric(df_agg_long['Điểm'], errors='coerce').fillna(0)
-        # Nhóm dữ liệu lại
         df_agg_grouped = df_agg_long.groupby([col_tc_agg, 'Thành viên'], as_index=False)['Điểm'].sum()
         st.altair_chart(plot_stacked_chart(df_agg_grouped, df_agg_grouped[col_tc_agg].unique().tolist(), col_tc_agg), use_container_width=True)
         st.info(note_text)
@@ -75,14 +74,15 @@ try:
             df_m = df_clean.melt(id_vars=[tc_col], var_name='Thành viên', value_name='Điểm')
             df_mem = df_m[df_m['Thành viên'] == selected_member]
             cows_list = df_m[tc_col].unique()
+            # Pos: 2 tiêu chí đầu, Neg: 2 tiêu chí cuối
             pos = df_mem[df_mem[tc_col].isin(cows_list[:2])]['Điểm'].sum()
-            neg = df_mem[df_mem[tc_col].isin(cows_list[2:])]['Điểm'].sum() if len(cows_list) > 2 else 0
+            neg = df_mem[df_mem[tc_col].isin(cows_list[2:])]['Điểm'].sum() if len(cows_list) >= 4 else 0
             trend_data.append({'Tuần': week_name, 'Đóng góp (Tốt)': pos, 'Cảnh báo (Xấu)': neg})
         
         df_trend = pd.DataFrame(trend_data)
-        base = alt.Chart(df_trend).encode(x=alt.X('Tuần:N', title="Chu kỳ tuần"))
-        bar = base.mark_bar(color='#2ecc71', opacity=0.6).encode(y=alt.Y('Đóng góp (Tốt):Q', title="Điểm Đóng Góp"))
-        line = base.mark_line(color='#e74c3c', strokeWidth=3, point=True).encode(y=alt.Y('Cảnh báo (Xấu):Q', title="Điểm Cảnh Báo"))
+        base = alt.Chart(df_trend).encode(x=alt.X('Tuần:N', title="Chu kỳ tuần", axis=alt.Axis(labelAngle=0)))
+        bar = base.mark_bar(color='#2ecc71', opacity=0.6).encode(y=alt.Y('Đóng góp (Tốt):Q', title="Điểm"))
+        line = base.mark_line(color='#e74c3c', strokeWidth=3, point=True).encode(y=alt.Y('Cảnh báo (Xấu):Q', title="Điểm"))
         st.altair_chart((bar + line).properties(height=400).interactive(), use_container_width=True)
 
 except Exception as e:
