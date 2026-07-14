@@ -24,35 +24,45 @@ def clean_sheet(sheet):
     df.columns = df.columns.str.replace('\n', ' ').str.replace('\r', '').str.strip()
     return df
 
+# Hàm vẽ biểu đồ chuẩn hóa (dùng chung cho cả 2 tab)
+def plot_stacked_chart(df_long, list_cows, col_tc, x_axis_title="Thành viên"):
+    df_chart = df_long.copy()
+    
+    # 2 tiêu chí cuối là tiêu chí cảnh báo -> nhân -1 để nằm dưới trục 0
+    if len(list_cows) >= 4:
+        tieu_cuc = list_cows[2:] 
+        df_chart.loc[df_chart[col_tc].isin(tieu_cuc), 'Điểm'] *= -1
+    
+    # Bảng màu chuẩn: Xanh dương, Xanh lá, Cam, Đỏ
+    custom_colors = ['#3498db', '#2ecc71', '#f39c12', '#e74c3c']
+    
+    return alt.Chart(df_chart).mark_bar(size=40).encode(
+        x=alt.X(f'{x_axis_title}:N', sort=fixed_names if x_axis_title=="Thành viên" else None, axis=alt.Axis(labelAngle=0)),
+        y=alt.Y('Điểm:Q', title="Số phiếu"),
+        color=alt.Color(f'{col_tc}:N', 
+                        scale=alt.Scale(range=custom_colors), 
+                        legend=alt.Legend(title="Tiêu chí đánh giá", orient='bottom', direction='vertical', labelLimit=1000)),
+        tooltip=[x_axis_title, col_tc, 'Điểm']
+    ).properties(height=500).interactive()
+
 try:
     all_sheets = load_data()
     tab1, tab2 = st.tabs(["📅 Đánh Giá Từng Tuần", "📈 Tổng Hợp Cá Nhân Theo Tuần"])
     
     # 1. TAB ĐÁNH GIÁ TỪNG TUẦN
     with tab1:
-        selected_week = st.selectbox("Chọn Tuần cần xem:", list(all_sheets.keys()))
+        selected_week = st.selectbox("Chọn Tuần:", list(all_sheets.keys()))
         df_raw = clean_sheet(all_sheets[selected_week])
         col_tc = df_raw.columns[0]
-        
         df_long = df_raw.melt(id_vars=[col_tc], var_name='Thành viên', value_name='Điểm')
         df_long['Điểm'] = pd.to_numeric(df_long['Điểm'], errors='coerce').fillna(0)
         
-        # Biểu đồ cột cho tuần cụ thể
-        chart = alt.Chart(df_long).mark_bar(size=40).encode(
-            x=alt.X('Thành viên:N', sort=fixed_names, axis=alt.Axis(labelAngle=0)),
-            y=alt.Y('Điểm:Q', title="Số phiếu"),
-            color=alt.Color(f'{col_tc}:N', legend=alt.Legend(title="Tiêu chí", orient='bottom', direction='vertical', labelLimit=1000)),
-            tooltip=['Thành viên', f'{col_tc}', 'Điểm']
-        ).properties(height=500).interactive()
-        
-        st.altair_chart(chart, use_container_width=True)
+        st.altair_chart(plot_stacked_chart(df_long, df_raw[col_tc].unique().tolist(), col_tc), use_container_width=True)
         with st.expander("📋 Số liệu chi tiết"): st.dataframe(df_raw, use_container_width=True)
 
-    # 2. TAB TỔNG HỢP CÁ NHÂN THEO TUẦN (Thay thế xu hướng)
+    # 2. TAB TỔNG HỢP CÁ NHÂN THEO TUẦN
     with tab2:
-        st.subheader("Theo dõi biến động phong độ cá nhân qua từng tuần")
         selected_member = st.selectbox("🔍 Chọn Thành viên:", fixed_names)
-        
         trend_data = []
         for week_name, sheet in all_sheets.items():
             df_clean = clean_sheet(sheet)
@@ -60,26 +70,15 @@ try:
             df_m = df_clean.melt(id_vars=[tc_col], var_name='Thành viên', value_name='Điểm')
             df_mem = df_m[df_m['Thành viên'] == selected_member]
             
-            cows_list = df_m[tc_col].unique()
-            pos = df_mem[df_mem[tc_col].isin(cows_list[:2])]['Điểm'].sum()
-            neg = df_mem[df_mem[tc_col].isin(cows_list[2:])]['Điểm'].sum() if len(cows_list) >= 4 else 0
-            
-            trend_data.append({'Tuần': week_name, 'Đóng góp': pos, 'Cảnh báo': neg})
+            # Giữ nguyên cấu trúc các tiêu chí để hàm plot_stacked_chart hiểu được logic âm dương
+            for _, row in df_mem.iterrows():
+                trend_data.append({'Tuần': week_name, tc_col: row[tc_col], 'Điểm': row['Điểm']})
         
         df_trend = pd.DataFrame(trend_data)
+        tc_col = df_trend.columns[1] # Lấy lại tên cột tiêu chí
         
-        # Vẽ biểu đồ kết hợp cột (Đóng góp) và đường (Cảnh báo)
-        base = alt.Chart(df_trend).encode(x=alt.X('Tuần:N', title="Chu kỳ tuần", axis=alt.Axis(labelAngle=0)))
-        
-        bar = base.mark_bar(color='#2ecc71', opacity=0.6).encode(
-            y=alt.Y('Đóng góp:Q', title="Số điểm")
-        )
-        line = base.mark_line(color='#e74c3c', strokeWidth=3, point=True).encode(
-            y=alt.Y('Cảnh báo:Q', title="Số điểm")
-        )
-        
-        st.altair_chart((bar + line).properties(height=400).interactive(), use_container_width=True)
-        st.info("💡 **Cách đọc:** Cột xanh (Tiêu chí 1&2) là tổng điểm Đóng góp. Đường đỏ (Tiêu chí 3&4) là tổng điểm Cảnh báo qua các tuần.")
+        st.altair_chart(plot_stacked_chart(df_trend, df_trend[tc_col].unique().tolist(), tc_col, x_axis_title="Tuần"), use_container_width=True)
+        st.info("💡 **Cách đọc:** Cột dương là đóng góp tốt, cột âm (cam/đỏ) là tiêu chí cảnh báo.")
 
 except Exception as e:
     st.error(f"Lỗi: {e}")
