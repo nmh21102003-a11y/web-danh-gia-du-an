@@ -7,8 +7,7 @@ import re
 st.set_page_config(layout="wide")
 st.title("📊 Bảng tổng hợp đánh giá nội bộ")
 
-# Ghi chú nguồn phiếu
-st.info("📌 **Ghi chú:** Tổng số phiếu đánh giá tối đa mỗi tuần là 17 phiếu (bao gồm 06 phiếu của nhóm thường trực dự án, 06 phiếu của nhóm văn phòng dự án, 05 phiếu của team McKinsey). Tiêu chí 1 & 2: Tiêu chí đóng góp. Tiêu chí 3 & 4: Tiêu chí cảnh báo.")
+st.info("📌 **Ghi chú:** Tổng số phiếu đánh giá tối đa mỗi tuần là 17 phiếu. Tiêu chí 1 & 2: Đóng góp. Tiêu chí 3 & 4: Cảnh báo.")
 
 file_url = "https://github.com/nmh21102003-a11y/web-danh-gia-du-an/raw/refs/heads/main/Du_Lieu_Danh_Gia.xlsx"
 
@@ -24,36 +23,10 @@ fixed_names = [
 def clean_sheet(sheet):
     df = sheet.loc[:, ~sheet.columns.str.contains('^Unnamed')].dropna(how='all')
     df.columns = df.columns.str.replace('\n', ' ').str.replace('\r', '').str.strip()
-    
     if not df.empty:
         tc_col = df.columns[0]
-        df[tc_col] = df[tc_col].apply(
-            lambda x: str(x).strip() + "." if isinstance(x, str) and "Tiêu chí 04" in str(x) and not str(x).strip().endswith(".") else x
-        )
-        
+        df[tc_col] = df[tc_col].apply(lambda x: str(x).strip() + "." if "Tiêu chí 04" in str(x) and not str(x).strip().endswith(".") else x)
     return df
-
-def get_display_name(sheet_name):
-    name = sheet_name.strip()
-    clean_name = name
-    if "Phiếu Đánh Giá" in name:
-        clean_name = "Phiếu Đánh Giá " + name.split("Phiếu Đánh Giá")[-1].strip()
-
-    if "Pre-work" in clean_name or "Tuần 1" in clean_name:
-        return f"{clean_name} (từ ngày 22/6/2026 đến ngày 07/7/2026)"
-    
-    match = re.search(r'Tuần\s*(\d+)', clean_name)
-    if match:
-        n = int(match.group(1))
-        if n >= 2:
-            base_end_date = datetime.date(2026, 7, 7)
-            start_date = base_end_date + datetime.timedelta(days=1 + (n - 2) * 7)
-            end_date = start_date + datetime.timedelta(days=6)
-            def format_dt(dt):
-                return f"{dt.day:02d}/{dt.month}/{dt.year}"
-            return f"{clean_name} (từ ngày {format_dt(start_date)} đến ngày {format_dt(end_date)})"
-            
-    return clean_name
 
 def get_split_week_name(sheet_name):
     name = sheet_name.strip()
@@ -64,93 +37,60 @@ def get_split_week_name(sheet_name):
 
 def plot_stacked_chart(df_long, col_tc, list_cows, x_axis_title="Thành viên", is_week_view=True):
     df_chart = df_long.copy()
-    
-    # Logic âm dương
     if len(list_cows) >= 4:
-        tieu_cuc = list_cows[2:]
-        df_chart.loc[df_chart[col_tc].isin(tieu_cuc), 'Điểm'] *= -1
+        df_chart.loc[df_chart[col_tc].isin(list_cows[2:]), 'Điểm'] *= -1
     
     custom_colors = ['#3498db', '#2ecc71', '#f39c12', '#e74c3c']
     
-    unique_x = len(df_chart[x_axis_title].unique())
-    width_per_bar = 80 if is_week_view else 140 
-    chart_width = max(800, unique_x * width_per_bar)
-    
     base = alt.Chart(df_chart).encode(
-        x=alt.X(f'{x_axis_title}:N', 
-                sort=fixed_names if is_week_view else None,
-                axis=alt.Axis(
-                    labelAngle=0, 
-                    labelOverlap=False,
-                    labelExpr="split(datum.value, ' ~ ')",
-                    domain=False, 
-                    ticks=False   
-                )),
-        y=alt.Y('Điểm:Q', 
-                title="Điểm đánh giá", 
-                scale=alt.Scale(nice=False)), 
-        color=alt.Color(f'{col_tc}:N', 
-                        scale=alt.Scale(domain=list_cows, range=custom_colors), 
-                        legend=alt.Legend(title="Tiêu chí đánh giá", orient='bottom', direction='vertical', labelLimit=1000)),
+        x=alt.X(f'{x_axis_title}:N', sort=fixed_names if is_week_view else None, axis=alt.Axis(labelAngle=0, labelExpr="split(datum.value, ' ~ ')")),
+        y=alt.Y('Điểm:Q', title="Điểm đánh giá", scale=alt.Scale(nice=False)),
+        color=alt.Color(f'{col_tc}:N', scale=alt.Scale(domain=list_cows, range=custom_colors)),
         tooltip=[x_axis_title, col_tc, 'Điểm']
     )
     
     bars = base.mark_bar(size=40)
     
-    # Nhãn số: Màu trắng, canh giữa, chỉ hiện khi Điểm != 0
-    text = base.mark_text(dy=0, color='white', fontWeight='bold', baseline='middle').encode(
+    # ĐÃ CĂN GIỮA VÀ ĐỂ MÀU TRẮNG
+    text = base.mark_text(
+        baseline='middle', 
+        align='center', 
+        color='white', 
+        fontWeight='bold'
+    ).encode(
         text=alt.condition(alt.datum.Điểm != 0, 'Điểm:Q', alt.value(''))
     )
     
-    rule = alt.Chart(pd.DataFrame({'Điểm': [0]})).mark_rule(color='#333333', strokeWidth=2).encode(
-        y='Điểm:Q'
-    )
+    rule = alt.Chart(pd.DataFrame({'Điểm': [0]})).mark_rule(color='#333333', strokeWidth=2).encode(y='Điểm:Q')
     
-    return (bars + text + rule).properties(width=chart_width, height=500).interactive()
+    return (bars + text + rule).properties(width=800, height=500).interactive()
 
 try:
     all_sheets = load_data()
-    
     first_sheet = list(all_sheets.values())[0]
-    df_first = clean_sheet(first_sheet)
-    col_tc_global = df_first.columns[0]
-    global_cows = df_first[col_tc_global].unique().tolist()
+    global_cows = clean_sheet(first_sheet).iloc[:, 0].unique().tolist()
     
     tab1, tab2 = st.tabs(["📅 Đánh Giá Từng Tuần", "📈 Tổng Hợp Cá Nhân Theo Tuần"])
     
     with tab1:
-        week_options = {get_display_name(k): k for k in all_sheets.keys()}
-        selected_display_week = st.selectbox("Chọn Tuần:", list(week_options.keys()))
-        selected_week = week_options[selected_display_week]
-        
+        selected_week = st.selectbox("Chọn Tuần:", list(all_sheets.keys()))
         df_raw = clean_sheet(all_sheets[selected_week])
         col_tc = df_raw.columns[0]
         df_long = df_raw.melt(id_vars=[col_tc], var_name='Thành viên', value_name='Điểm')
         df_long['Điểm'] = pd.to_numeric(df_long['Điểm'], errors='coerce').fillna(0)
-        
-        st.altair_chart(plot_stacked_chart(df_long, col_tc, global_cows, x_axis_title="Thành viên", is_week_view=True), use_container_width=True)
-        with st.expander("📋 Số liệu chi tiết"): st.dataframe(df_raw, use_container_width=True)
-
+        st.altair_chart(plot_stacked_chart(df_long, col_tc, global_cows), use_container_width=True)
+    
     with tab2:
-        selected_member = st.selectbox("🔍 Chọn Thành viên:", fixed_names)
+        member = st.selectbox("🔍 Chọn Thành viên:", fixed_names)
         trend_data = []
         for week_name, sheet in all_sheets.items():
-            df_clean = clean_sheet(sheet)
-            tc_col = df_clean.columns[0]
-            df_m = df_clean.melt(id_vars=[tc_col], var_name='Thành viên', value_name='Điểm')
-            df_mem = df_m[df_m['Thành viên'] == selected_member]
-            
-            display_week = get_split_week_name(week_name)
-            
-            for _, row in df_mem.iterrows():
-                trend_data.append({'Tuần': display_week, tc_col: row[tc_col], 'Điểm': row['Điểm']})
+            df_m = clean_sheet(sheet).melt(id_vars=[clean_sheet(sheet).columns[0]], var_name='Thành viên', value_name='Điểm')
+            for _, row in df_m[df_m['Thành viên'] == member].iterrows():
+                trend_data.append({'Tuần': get_split_week_name(week_name), col_tc: row[col_tc], 'Điểm': row['Điểm']})
         
         df_trend = pd.DataFrame(trend_data)
         if not df_trend.empty:
-            tc_col = df_trend.columns[1]
-            st.altair_chart(plot_stacked_chart(df_trend, tc_col, global_cows, x_axis_title="Tuần", is_week_view=False), use_container_width=False)
-        else:
-            st.warning("Chưa có dữ liệu cho thành viên này.")
+            st.altair_chart(plot_stacked_chart(df_trend, col_tc, global_cows, x_axis_title="Tuần", is_week_view=False), use_container_width=True)
 
 except Exception as e:
     st.error(f"Lỗi: {e}")
