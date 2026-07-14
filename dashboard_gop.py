@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 import altair as alt
+import datetime
+import re
 
 st.set_page_config(layout="wide")
 st.title("📊 Bảng tổng hợp đánh giá nội bộ")
@@ -24,11 +26,35 @@ def clean_sheet(sheet):
     df.columns = df.columns.str.replace('\n', ' ').str.replace('\r', '').str.strip()
     return df
 
-# Hàm chuẩn hóa tên: Lọc lấy từ "Phiếu Đánh Giá" trở đi
-def get_clean_week_name(sheet_name):
+# Hàm 1: Tự động tính ngày dành cho hộp chọn ở Tab 1
+def get_display_name(sheet_name):
+    name = sheet_name.strip()
+    clean_name = name
+    if "Phiếu Đánh Giá" in name:
+        clean_name = "Phiếu Đánh Giá " + name.split("Phiếu Đánh Giá")[-1].strip()
+
+    if "Pre-work" in clean_name or "Tuần 1" in clean_name:
+        return f"{clean_name} (từ ngày 22/6/2026 đến ngày 07/7/2026)"
+    
+    match = re.search(r'Tuần\s*(\d+)', clean_name)
+    if match:
+        n = int(match.group(1))
+        if n >= 2:
+            base_end_date = datetime.date(2026, 7, 7)
+            start_date = base_end_date + datetime.timedelta(days=1 + (n - 2) * 7)
+            end_date = start_date + datetime.timedelta(days=6)
+            def format_dt(dt):
+                return f"{dt.day:02d}/{dt.month}/{dt.year}" # Thêm số 0 nếu ngày < 10
+            return f"{clean_name} (từ ngày {format_dt(start_date)} đến ngày {format_dt(end_date)})"
+            
+    return clean_name
+
+# Hàm 2: Rút gọn và ngắt dòng trục X dành cho Tab 2
+def get_split_week_name(sheet_name):
     name = sheet_name.strip()
     if "Phiếu Đánh Giá" in name:
-        return "Phiếu Đánh Giá " + name.split("Phiếu Đánh Giá")[-1].strip()
+        suffix = name.split("Phiếu Đánh Giá")[-1].strip()
+        return f"Phiếu Đánh Giá ~ {suffix}"
     return name
 
 # Hàm vẽ biểu đồ với CỐ ĐỊNH màu và tiêu chí
@@ -44,7 +70,7 @@ def plot_stacked_chart(df_long, col_tc, list_cows, x_axis_title="Thành viên", 
     
     # Tính toán chiều rộng để thanh cuộn hoạt động tốt
     unique_x = len(df_chart[x_axis_title].unique())
-    width_per_bar = 80 if is_week_view else 140 # Trục X của Tab 2 rộng hơn chút để chứa chữ
+    width_per_bar = 80 if is_week_view else 140 # Tab 2 rộng hơn chút để hiển thị chữ thoải mái
     chart_width = max(800, unique_x * width_per_bar)
     
     chart = alt.Chart(df_chart).mark_bar(size=40).encode(
@@ -53,7 +79,7 @@ def plot_stacked_chart(df_long, col_tc, list_cows, x_axis_title="Thành viên", 
                 axis=alt.Axis(
                     labelAngle=0, 
                     labelOverlap=False,
-                    labelExpr="split(datum.value, ' ~ ')", # Lệnh tách chữ xuống dòng tại dấu ~
+                    labelExpr="split(datum.value, ' ~ ')", # Tách chữ xuống dòng tại dấu ~
                     domain=False, 
                     ticks=False   
                 )),
@@ -86,8 +112,8 @@ try:
     
     # 1. TAB ĐÁNH GIÁ TỪNG TUẦN
     with tab1:
-        # Sử dụng tên chuẩn cho dropdown (không có dấu ~)
-        week_options = {get_clean_week_name(k): k for k in all_sheets.keys()}
+        # Sử dụng hàm có ngày tháng cho hộp chọn (Dropdown)
+        week_options = {get_display_name(k): k for k in all_sheets.keys()}
         selected_display_week = st.selectbox("Chọn Tuần:", list(week_options.keys()))
         selected_week = week_options[selected_display_week]
         
@@ -109,9 +135,8 @@ try:
             df_m = df_clean.melt(id_vars=[tc_col], var_name='Thành viên', value_name='Điểm')
             df_mem = df_m[df_m['Thành viên'] == selected_member]
             
-            # Lấy tên tuần chuẩn và chèn ký tự ~ để ép trục X xuống dòng
-            clean_name = get_clean_week_name(week_name)
-            display_week = clean_name.replace("Phiếu Đánh Giá ", "Phiếu Đánh Giá ~ ")
+            # Sử dụng hàm ngắt dòng (không ngày tháng) cho trục X của Tab 2
+            display_week = get_split_week_name(week_name)
             
             for _, row in df_mem.iterrows():
                 trend_data.append({'Tuần': display_week, tc_col: row[tc_col], 'Điểm': row['Điểm']})
