@@ -21,11 +21,18 @@ def clean_sheet(sheet):
     df.columns = df.columns.str.replace('\n', ' ').str.replace('\r', '').str.strip()
     return df
 
-# Hàm vẽ biểu đồ chính
+# Hàm vẽ biểu đồ: Các tiêu chí từ thứ 3 trở đi sẽ hiển thị giá trị âm
 def plot_stacked_chart(df_long, list_cows, col_tc):
-    return alt.Chart(df_long).mark_bar(size=40).encode(
+    df_chart = df_long.copy()
+    
+    # Logic: Nếu có từ 3 tiêu chí trở lên, tiêu chí 3+ sẽ bị nhân -1 để nằm phía dưới trục 0
+    if len(list_cows) > 2:
+        tieu_cuc = list_cows[2:]
+        df_chart.loc[df_chart[col_tc].isin(tieu_cuc), 'Điểm'] *= -1
+    
+    return alt.Chart(df_chart).mark_bar(size=40).encode(
         x=alt.X('Thành viên:N', sort=fixed_names, axis=alt.Axis(labelAngle=0)),
-        y=alt.Y('Điểm:Q', title="Số phiếu"),
+        y=alt.Y('Điểm:Q', title="Số phiếu (Dương: Tốt | Âm: Cảnh báo)"),
         color=alt.Color(f'{col_tc}:N', legend=alt.Legend(title="Tiêu chí", orient='bottom', labelLimit=800)),
         tooltip=['Thành viên', f'{col_tc}', 'Điểm']
     ).properties(height=500).interactive()
@@ -34,8 +41,7 @@ try:
     all_sheets = load_data()
     tab1, tab2, tab3 = st.tabs(["📅 Đánh Giá Từng Tuần", "📈 Tổng Hợp Cả Quá Trình", "👤 Xu Hướng Cá Nhân"])
     
-    # Text ghi chú chung cho biểu đồ
-    note_text = "📌 **Ghi chú:** Tổng số phiếu đánh giá tối đa mỗi tuần cho từng thành viên là 17 phiếu."
+    note_text = "📌 **Ghi chú:** Tổng số phiếu tối đa mỗi tuần cho từng thành viên là 17 phiếu. Các tiêu chí từ thứ 3 trở đi hiển thị âm là các tiêu chí cảnh báo."
 
     with tab1:
         selected_week = st.selectbox("Chọn Tuần:", list(all_sheets.keys()))
@@ -53,9 +59,11 @@ try:
         col_tc_agg = df_agg_raw.columns[0]
         df_agg_long = df_agg_raw.melt(id_vars=[col_tc_agg], var_name='Thành viên', value_name='Điểm')
         df_agg_long['Điểm'] = pd.to_numeric(df_agg_long['Điểm'], errors='coerce').fillna(0)
-        st.altair_chart(plot_stacked_chart(df_agg_long, df_agg_long[col_tc_agg].unique().tolist(), col_tc_agg), use_container_width=True)
+        # Nhóm dữ liệu lại
+        df_agg_grouped = df_agg_long.groupby([col_tc_agg, 'Thành viên'], as_index=False)['Điểm'].sum()
+        st.altair_chart(plot_stacked_chart(df_agg_grouped, df_agg_grouped[col_tc_agg].unique().tolist(), col_tc_agg), use_container_width=True)
         st.info(note_text)
-        with st.expander("Số liệu tổng hợp"): st.dataframe(df_agg_long.pivot_table(index=col_tc_agg, columns='Thành viên', values='Điểm', aggfunc='sum'), use_container_width=True)
+        with st.expander("Số liệu tổng hợp"): st.dataframe(df_agg_grouped.pivot_table(index=col_tc_agg, columns='Thành viên', values='Điểm', aggfunc='sum'), use_container_width=True)
 
     with tab3:
         st.subheader("Bức tranh phong độ: Đóng góp (Cột) & Cảnh báo (Đường)")
