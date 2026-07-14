@@ -81,7 +81,8 @@ def plot_stacked_chart(df_long, col_tc, list_cows, x_axis_title="Thành viên", 
     width_per_bar = 80 if is_week_view else 140 
     chart_width = max(800, unique_x * width_per_bar)
     
-    chart = alt.Chart(df_chart).mark_bar(size=40).encode(
+    # Base encoding cho biểu đồ
+    base = alt.Chart(df_chart).encode(
         x=alt.X(f'{x_axis_title}:N', 
                 sort=fixed_names if is_week_view else None,
                 axis=alt.Axis(
@@ -92,23 +93,33 @@ def plot_stacked_chart(df_long, col_tc, list_cows, x_axis_title="Thành viên", 
                     ticks=False   
                 )),
         y=alt.Y('Điểm:Q', 
-                title="Điểm đánh giá", # Đã sửa tại đây
-                scale=alt.Scale(nice=False)), 
+                title="Điểm đánh giá", 
+                scale=alt.Scale(nice=False)),
         color=alt.Color(f'{col_tc}:N', 
                         scale=alt.Scale(domain=list_cows, range=custom_colors), 
                         legend=alt.Legend(title="Tiêu chí đánh giá", orient='bottom', direction='vertical', labelLimit=1000)),
         tooltip=[x_axis_title, col_tc, 'Điểm']
-    ).properties(width=chart_width, height=500)
+    )
     
+    # Vẽ cột
+    bars = base.mark_bar(size=40)
+    
+    # Vẽ số điểm: Màu trắng, chỉ hiện khi Điểm != 0
+    text = base.mark_text(dy=0, color='white', fontWeight='bold').encode(
+        text=alt.condition(alt.datum.Điểm != 0, 'Điểm:Q', alt.value(''))
+    )
+    
+    # Kẻ một đường chuẩn (baseline) màu đen tại mốc 0
     rule = alt.Chart(pd.DataFrame({'Điểm': [0]})).mark_rule(color='#333333', strokeWidth=2).encode(
         y='Điểm:Q'
     )
     
-    return (chart + rule).interactive()
+    return (bars + text + rule).properties(width=chart_width, height=500).interactive()
 
 try:
     all_sheets = load_data()
     
+    # Lấy danh sách tiêu chí chuẩn toàn cục
     first_sheet = list(all_sheets.values())[0]
     df_first = clean_sheet(first_sheet)
     col_tc_global = df_first.columns[0]
@@ -116,6 +127,7 @@ try:
     
     tab1, tab2 = st.tabs(["📅 Đánh Giá Từng Tuần", "📈 Tổng Hợp Cá Nhân Theo Tuần"])
     
+    # 1. TAB ĐÁNH GIÁ TỪNG TUẦN
     with tab1:
         week_options = {get_display_name(k): k for k in all_sheets.keys()}
         selected_display_week = st.selectbox("Chọn Tuần:", list(week_options.keys()))
@@ -129,6 +141,7 @@ try:
         st.altair_chart(plot_stacked_chart(df_long, col_tc, global_cows, x_axis_title="Thành viên", is_week_view=True), use_container_width=True)
         with st.expander("📋 Số liệu chi tiết"): st.dataframe(df_raw, use_container_width=True)
 
+    # 2. TAB TỔNG HỢP CÁ NHÂN THEO TUẦN
     with tab2:
         selected_member = st.selectbox("🔍 Chọn Thành viên:", fixed_names)
         trend_data = []
