@@ -5,7 +5,7 @@ import altair as alt
 st.set_page_config(layout="wide")
 st.title("📊 Hệ thống Theo dõi & Đánh giá Thành viên")
 
-# 1. Cập nhật dòng thông tin chính xác theo yêu cầu
+# Cập nhật dòng thông tin chính xác theo yêu cầu
 st.info("📌 **Thông tin:** Tổng số phiếu đánh giá tối đa mỗi tuần là 17 phiếu (6 phiếu Nhóm thường trực dự án + 6 phiếu Văn phòng dự án + 5 phiếu McKinsey).")
 
 file_url = "https://github.com/nmh21102003-a11y/web-danh-gia-du-an/raw/refs/heads/main/Du_Lieu_Danh_Gia.xlsx"
@@ -46,7 +46,6 @@ try:
         
         # Ở tab Tổng hợp, max trục Y = 17 * số tuần (Để đảm bảo đồ thị không bị cắt ngọn)
         max_y = 17 * len(all_sheets)
-        # Tạo danh sách các số nguyên từ 0 đến max_y để ghim trục
         y_tick_values = list(range(0, max_y + 1))
     else:
         # Chế độ xem từng tuần
@@ -64,7 +63,6 @@ try:
         
         # Mức max của trục Y cho TỪNG TUẦN cố định là 17
         max_y = 17
-        # Chỉ hiển thị danh sách vạch số nguyên từ 0, 1, 2... đến 17
         y_tick_values = list(range(0, 18))
 
     match_cols = [col for col in fixed_names if col in df_display.columns]
@@ -76,10 +74,10 @@ try:
         
         c = alt.Chart(data).mark_bar(size=40).encode(
             x=alt.X('Thành viên:N', sort=fixed_names, axis=alt.Axis(labelAngle=0)),
-            # 2. KHÓA CỨNG TRỤC TUNG: range[0, max_y], ép các vạch bằng y_tick_values
+            # Bắt buộc hiện đủ tất cả các số bằng labelOverlap=False
             y=alt.Y('Điểm:Q', 
                     scale=alt.Scale(domain=[0, max_y], clamp=True), 
-                    axis=alt.Axis(values=y_tick_values, format="d", tickMinStep=1)), 
+                    axis=alt.Axis(values=y_tick_values, format="d", labelOverlap=False)), 
             color=alt.value(color)
         ).properties(height=300).interactive()
         st.altair_chart(c, use_container_width=True)
@@ -95,9 +93,10 @@ try:
         chart([cows[1]], '#3498db')
         
     if len(cows) > 2:
-        st.subheader("3️⃣ & 4️⃣ Tiêu chí Tiêu cực")
-        st.caption(" & ".join(cows[2:]))
-        chart(cows[2:], '#e74c3c')
+        # Đã đổi thành 3️⃣ Tiêu chí 03
+        st.subheader("3️⃣ Tiêu chí 03")
+        st.caption(f"{cows[2]}")
+        chart([cows[2]], '#e74c3c')
 
     with st.expander("📋 Số liệu chi tiết"):
         st.dataframe(df_display, use_container_width=True, height=300)
