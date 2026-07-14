@@ -86,9 +86,10 @@ def plot_stacked_chart(df_long, col_tc, list_cows, x_axis_title="Thành viên", 
     
     bars = base.mark_bar(size=40)
     
-    # Vẽ nhãn chữ số điểm lên cột
-    text = base.mark_text(dy=-10, color='black', fontWeight='bold').encode(
-        text='Điểm:Q'
+    # Vẽ nhãn chữ: Chỉ hiện khi Điểm != 0 và chữ màu trắng
+    text = base.mark_text(dy=0, color='white', fontWeight='bold').encode(
+        text=alt.Text('Điểm:Q'),
+        opacity=alt.condition(alt.datum.Điểm != 0, alt.value(1), alt.value(0)) 
     )
     
     rule = alt.Chart(pd.DataFrame({'Điểm': [0]})).mark_rule(color='#333333', strokeWidth=2).encode(y='Điểm:Q')
