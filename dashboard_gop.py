@@ -84,4 +84,17 @@ try:
     # 1. TAB ĐÁNH GIÁ TỪNG TUẦN
     with tab1:
         selected_week = st.selectbox("Chọn Tuần:", list(all_sheets.keys()))
-        df_raw = clean_sheet(all_sheets[selected_week
+        df_raw = clean_sheet(all_sheets[selected_week])
+        col_tc = df_raw.columns[0]
+        df_long = df_raw.melt(id_vars=[col_tc], var_name='Thành viên', value_name='Điểm')
+        df_long['Điểm'] = pd.to_numeric(df_long['Điểm'], errors='coerce').fillna(0)
+        
+        st.altair_chart(plot_stacked_chart(df_long, col_tc, global_cows, x_axis_title="Thành viên", is_week_view=True), use_container_width=True)
+        with st.expander("📋 Số liệu chi tiết"): st.dataframe(df_raw, use_container_width=True)
+
+    # 2. TAB TỔNG HỢP CÁ NHÂN THEO TUẦN
+    with tab2:
+        selected_member = st.selectbox("🔍 Chọn Thành viên:", fixed_names)
+        trend_data = []
+        for week_name, sheet in all_sheets.items():
+            df_clean = clean_sheet(sheet
