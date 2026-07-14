@@ -44,24 +44,21 @@ def get_display_name(sheet_name):
 
 def plot_grouped_chart(df_long, col_tc, list_cows, x_axis_title="Thành viên"):
     df_chart = df_long.copy()
-    
-    # Logic âm dương
     if len(list_cows) >= 4:
         df_chart.loc[df_chart[col_tc].isin(list_cows[2:]), 'Điểm'] *= -1
     
     custom_colors = ['#3498db', '#2ecc71', '#f39c12', '#e74c3c']
     
     # Định nghĩa biểu đồ con
-    base = alt.Chart().encode(
+    base = alt.Chart(df_chart).encode(
         x=alt.X(f'{x_axis_title}:N', sort=fixed_names if x_axis_title=="Thành viên" else None),
         y=alt.Y('Điểm:Q', title="Điểm đánh giá"),
         color=alt.Color(f'{col_tc}:N', scale=alt.Scale(domain=list_cows, range=custom_colors)),
-    ).properties(height=300) # Chiều cao nằm ở đây mới đúng
+    ).properties(height=300)
     
-    bars = base.mark_bar(size=25).encode(data=df_chart)
-    text = base.mark_text(dy=-5, color='black', size=10).encode(text=alt.condition(alt.datum.Điểm != 0, 'Điểm:Q', alt.value('')), data=df_chart)
+    bars = base.mark_bar(size=25)
+    text = base.mark_text(dy=-5, color='black', size=10).encode(text=alt.condition(alt.datum.Điểm != 0, 'Điểm:Q', alt.value('')))
     
-    # Kết hợp và sử dụng facet để phân cột
     return (bars + text).facet(
         column=alt.Column(f'{x_axis_title}:N', sort=fixed_names if x_axis_title=="Thành viên" else None)
     ).resolve_scale(y='shared')
