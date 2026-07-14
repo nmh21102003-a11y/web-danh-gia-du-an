@@ -25,16 +25,13 @@ def clean_sheet(sheet):
     df = sheet.loc[:, ~sheet.columns.str.contains('^Unnamed')].dropna(how='all')
     df.columns = df.columns.str.replace('\n', ' ').str.replace('\r', '').str.strip()
     
-    # Tự động thêm dấu chấm vào cuối Tiêu chí 04 nếu chưa có
     if not df.empty:
         tc_col = df.columns[0]
         df[tc_col] = df[tc_col].apply(
             lambda x: str(x).strip() + "." if isinstance(x, str) and "Tiêu chí 04" in str(x) and not str(x).strip().endswith(".") else x
         )
-        
     return df
 
-# Hàm 1: Tự động tính ngày dành cho hộp chọn ở Tab 1
 def get_display_name(sheet_name):
     name = sheet_name.strip()
     clean_name = name
@@ -52,12 +49,10 @@ def get_display_name(sheet_name):
             start_date = base_end_date + datetime.timedelta(days=1 + (n - 2) * 7)
             end_date = start_date + datetime.timedelta(days=6)
             def format_dt(dt):
-                return f"{dt.day:02d}/{dt.month}/{dt.year}" # Thêm số 0 nếu ngày < 10
+                return f"{dt.day:02d}/{dt.month}/{dt.year}"
             return f"{clean_name} (từ ngày {format_dt(start_date)} đến ngày {format_dt(end_date)})"
-            
     return clean_name
 
-# Hàm 2: Rút gọn và ngắt dòng trục X dành cho Tab 2
 def get_split_week_name(sheet_name):
     name = sheet_name.strip()
     if "Phiếu Đánh Giá" in name:
@@ -65,7 +60,6 @@ def get_split_week_name(sheet_name):
         return f"Phiếu Đánh Giá ~ {suffix}"
     return name
 
-# Hàm vẽ biểu đồ với CỐ ĐỊNH màu và tiêu chí
 def plot_stacked_chart(df_long, col_tc, list_cows, x_axis_title="Thành viên", is_week_view=True):
     df_chart = df_long.copy()
     
@@ -76,41 +70,33 @@ def plot_stacked_chart(df_long, col_tc, list_cows, x_axis_title="Thành viên", 
     
     custom_colors = ['#3498db', '#2ecc71', '#f39c12', '#e74c3c']
     
-    # Tính toán chiều rộng để thanh cuộn hoạt động tốt
     unique_x = len(df_chart[x_axis_title].unique())
-    width_per_bar = 80 if is_week_view else 140 # Tab 2 rộng hơn chút để hiển thị chữ thoải mái
+    width_per_bar = 80 if is_week_view else 140 
     chart_width = max(800, unique_x * width_per_bar)
     
-    chart = alt.Chart(df_chart).mark_bar(size=40).encode(
+    # Vẽ cột
+    base = alt.Chart(df_chart).encode(
         x=alt.X(f'{x_axis_title}:N', 
                 sort=fixed_names if is_week_view else None,
-                axis=alt.Axis(
-                    labelAngle=0, 
-                    labelOverlap=False,
-                    labelExpr="split(datum.value, ' ~ ')", # Tách chữ xuống dòng tại dấu ~
-                    domain=False, 
-                    ticks=False   
-                )),
-        y=alt.Y('Điểm:Q', 
-                title="Số phiếu",
-                scale=alt.Scale(nice=False)), # Ép trục Y cắt bỏ khoảng trống thừa để số 0 sát tên trục X
-        color=alt.Color(f'{col_tc}:N', 
-                        scale=alt.Scale(domain=list_cows, range=custom_colors), 
-                        legend=alt.Legend(title="Tiêu chí đánh giá", orient='bottom', direction='vertical', labelLimit=1000)),
+                axis=alt.Axis(labelAngle=0, labelOverlap=False, labelExpr="split(datum.value, ' ~ ')", domain=False, ticks=False)),
+        y=alt.Y('Điểm:Q', title="Điểm đánh giá", scale=alt.Scale(nice=False)),
+        color=alt.Color(f'{col_tc}:N', scale=alt.Scale(domain=list_cows, range=custom_colors), legend=alt.Legend(title="Tiêu chí đánh giá", orient='bottom', direction='vertical', labelLimit=1000)),
         tooltip=[x_axis_title, col_tc, 'Điểm']
-    ).properties(width=chart_width, height=500)
-    
-    # Kẻ một đường chuẩn (baseline) màu đen tại mốc 0
-    rule = alt.Chart(pd.DataFrame({'Điểm': [0]})).mark_rule(color='#333333', strokeWidth=2).encode(
-        y='Điểm:Q'
     )
     
-    return (chart + rule).interactive()
+    bars = base.mark_bar(size=40)
+    
+    # Vẽ nhãn chữ số điểm lên cột
+    text = base.mark_text(dy=-10, color='black', fontWeight='bold').encode(
+        text='Điểm:Q'
+    )
+    
+    rule = alt.Chart(pd.DataFrame({'Điểm': [0]})).mark_rule(color='#333333', strokeWidth=2).encode(y='Điểm:Q')
+    
+    return (bars + text + rule).interactive()
 
 try:
     all_sheets = load_data()
-    
-    # Lấy danh sách tiêu chí chuẩn toàn cục
     first_sheet = list(all_sheets.values())[0]
     df_first = clean_sheet(first_sheet)
     col_tc_global = df_first.columns[0]
@@ -118,9 +104,7 @@ try:
     
     tab1, tab2 = st.tabs(["📅 Đánh Giá Từng Tuần", "📈 Tổng Hợp Cá Nhân Theo Tuần"])
     
-    # 1. TAB ĐÁNH GIÁ TỪNG TUẦN
     with tab1:
-        # Sử dụng hàm có ngày tháng cho hộp chọn (Dropdown)
         week_options = {get_display_name(k): k for k in all_sheets.keys()}
         selected_display_week = st.selectbox("Chọn Tuần:", list(week_options.keys()))
         selected_week = week_options[selected_display_week]
@@ -133,7 +117,6 @@ try:
         st.altair_chart(plot_stacked_chart(df_long, col_tc, global_cows, x_axis_title="Thành viên", is_week_view=True), use_container_width=True)
         with st.expander("📋 Số liệu chi tiết"): st.dataframe(df_raw, use_container_width=True)
 
-    # 2. TAB TỔNG HỢP CÁ NHÂN THEO TUẦN
     with tab2:
         selected_member = st.selectbox("🔍 Chọn Thành viên:", fixed_names)
         trend_data = []
@@ -142,17 +125,13 @@ try:
             tc_col = df_clean.columns[0]
             df_m = df_clean.melt(id_vars=[tc_col], var_name='Thành viên', value_name='Điểm')
             df_mem = df_m[df_m['Thành viên'] == selected_member]
-            
-            # Sử dụng hàm ngắt dòng (không ngày tháng) cho trục X của Tab 2
             display_week = get_split_week_name(week_name)
-            
             for _, row in df_mem.iterrows():
                 trend_data.append({'Tuần': display_week, tc_col: row[tc_col], 'Điểm': row['Điểm']})
         
         df_trend = pd.DataFrame(trend_data)
         if not df_trend.empty:
             tc_col = df_trend.columns[1]
-            # use_container_width=False để thanh trượt ngang hoạt động khi số tuần tăng lên
             st.altair_chart(plot_stacked_chart(df_trend, tc_col, global_cows, x_axis_title="Tuần", is_week_view=False), use_container_width=False)
         else:
             st.warning("Chưa có dữ liệu cho thành viên này.")
