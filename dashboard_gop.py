@@ -24,11 +24,12 @@ def clean_sheet(sheet):
     df.columns = df.columns.str.replace('\n', ' ').str.replace('\r', '').str.strip()
     return df
 
-# Hàm tự động cắt ngắn tên sheet, chỉ lấy phần "Tuần X"
-def get_short_week_name(sheet_name):
-    if "Phiếu Đánh Giá " in sheet_name:
-        return sheet_name.split("Phiếu Đánh Giá ")[-1].strip()
-    return sheet_name.strip()
+# Hàm chuẩn hóa tên: Lọc lấy từ "Phiếu Đánh Giá" trở đi
+def get_clean_week_name(sheet_name):
+    name = sheet_name.strip()
+    if "Phiếu Đánh Giá" in name:
+        return "Phiếu Đánh Giá " + name.split("Phiếu Đánh Giá")[-1].strip()
+    return name
 
 # Hàm vẽ biểu đồ với CỐ ĐỊNH màu và tiêu chí
 def plot_stacked_chart(df_long, col_tc, list_cows, x_axis_title="Thành viên", is_week_view=True):
@@ -43,7 +44,7 @@ def plot_stacked_chart(df_long, col_tc, list_cows, x_axis_title="Thành viên", 
     
     # Tính toán chiều rộng để thanh cuộn hoạt động tốt
     unique_x = len(df_chart[x_axis_title].unique())
-    width_per_bar = 80 if is_week_view else 120 # Tab 2 thu gọn lại một chút vì tên tuần giờ đã rất ngắn
+    width_per_bar = 80 if is_week_view else 140 # Trục X của Tab 2 rộng hơn chút để chứa chữ
     chart_width = max(800, unique_x * width_per_bar)
     
     chart = alt.Chart(df_chart).mark_bar(size=40).encode(
@@ -51,7 +52,8 @@ def plot_stacked_chart(df_long, col_tc, list_cows, x_axis_title="Thành viên", 
                 sort=fixed_names if is_week_view else None,
                 axis=alt.Axis(
                     labelAngle=0, 
-                    labelOverlap=False, 
+                    labelOverlap=False,
+                    labelExpr="split(datum.value, ' ~ ')", # Lệnh tách chữ xuống dòng tại dấu ~
                     domain=False, 
                     ticks=False   
                 )),
@@ -84,8 +86,8 @@ try:
     
     # 1. TAB ĐÁNH GIÁ TỪNG TUẦN
     with tab1:
-        # Sử dụng tên tuần ngắn cho dropdown
-        week_options = {get_short_week_name(k): k for k in all_sheets.keys()}
+        # Sử dụng tên chuẩn cho dropdown (không có dấu ~)
+        week_options = {get_clean_week_name(k): k for k in all_sheets.keys()}
         selected_display_week = st.selectbox("Chọn Tuần:", list(week_options.keys()))
         selected_week = week_options[selected_display_week]
         
@@ -107,11 +109,12 @@ try:
             df_m = df_clean.melt(id_vars=[tc_col], var_name='Thành viên', value_name='Điểm')
             df_mem = df_m[df_m['Thành viên'] == selected_member]
             
-            # Lấy tên tuần ngắn (VD: "Tuần 2")
-            short_week = get_short_week_name(week_name)
+            # Lấy tên tuần chuẩn và chèn ký tự ~ để ép trục X xuống dòng
+            clean_name = get_clean_week_name(week_name)
+            display_week = clean_name.replace("Phiếu Đánh Giá ", "Phiếu Đánh Giá ~ ")
             
             for _, row in df_mem.iterrows():
-                trend_data.append({'Tuần': short_week, tc_col: row[tc_col], 'Điểm': row['Điểm']})
+                trend_data.append({'Tuần': display_week, tc_col: row[tc_col], 'Điểm': row['Điểm']})
         
         df_trend = pd.DataFrame(trend_data)
         if not df_trend.empty:
