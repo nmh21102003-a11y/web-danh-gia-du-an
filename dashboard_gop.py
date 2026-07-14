@@ -97,4 +97,24 @@ try:
         selected_member = st.selectbox("🔍 Chọn Thành viên:", fixed_names)
         trend_data = []
         for week_name, sheet in all_sheets.items():
-            df_clean = clean_sheet(sheet
+            df_clean = clean_sheet(sheet)
+            tc_col = df_clean.columns[0]
+            df_m = df_clean.melt(id_vars=[tc_col], var_name='Thành viên', value_name='Điểm')
+            df_mem = df_m[df_m['Thành viên'] == selected_member]
+            
+            # Đổi tên tuần để nó xuống dòng gọn gàng
+            display_week = format_week_name(week_name)
+            
+            for _, row in df_mem.iterrows():
+                trend_data.append({'Tuần': display_week, tc_col: row[tc_col], 'Điểm': row['Điểm']})
+        
+        df_trend = pd.DataFrame(trend_data)
+        if not df_trend.empty:
+            tc_col = df_trend.columns[1]
+            # use_container_width=False để thanh cuộn ngang xuất hiện nếu nhiều tuần
+            st.altair_chart(plot_stacked_chart(df_trend, tc_col, global_cows, x_axis_title="Tuần", is_week_view=False), use_container_width=False)
+        else:
+            st.warning("Chưa có dữ liệu cho thành viên này.")
+
+except Exception as e:
+    st.error(f"Lỗi: {e}")
