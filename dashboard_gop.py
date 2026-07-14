@@ -147,4 +147,9 @@ try:
         if not df_trend.empty:
             tc_col = df_trend.columns[1]
             # use_container_width=False để thanh trượt ngang hoạt động khi số tuần tăng lên
-            st.altair_chart(plot_stacked_chart(df_trend, tc_col, global_cows, x_axis_title="Tuần", is_week_view
+            st.altair_chart(plot_stacked_chart(df_trend, tc_col, global_cows, x_axis_title="Tuần", is_week_view=False), use_container_width=False)
+        else:
+            st.warning("Chưa có dữ liệu cho thành viên này.")
+
+except Exception as e:
+    st.error(f"Lỗi: {e}")
