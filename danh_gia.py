@@ -68,14 +68,14 @@ try:
     def chart(tieu_chi_list, color):
         data = df_long[df_long[col_tieu_chi].isin(tieu_chi_list)].groupby('Thành viên', as_index=False)['Điểm'].sum()
         
-        # Đã thêm clip=True để cắt viền và bind_y=False để khóa zoom dọc
+        # Mở khóa zoom + Bật clip gọt viền + Ép chân gốc 0
         c = alt.Chart(data).mark_bar(size=40, clip=True).encode(
             x=alt.X('Thành viên:N', sort=fixed_names, axis=alt.Axis(labelAngle=0)),
             y=alt.Y('Điểm:Q', 
-                    scale=alt.Scale(domain=[0, max_y]), 
+                    scale=alt.Scale(domainMin=0, domainMax=max_y, clamp=True), 
                     axis=alt.Axis(format="d", tickMinStep=1)), 
             color=alt.value(color)
-        ).properties(height=300).interactive(bind_y=False)
+        ).properties(height=300).interactive()
         
         st.altair_chart(c, use_container_width=True)
 
