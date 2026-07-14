@@ -12,7 +12,8 @@ st.info("📌 **Ghi chú:** Tổng số phiếu đánh giá tối đa mỗi tu�
 
 file_url = "https://github.com/nmh21102003-a11y/web-danh-gia-du-an/raw/refs/heads/main/Du_Lieu_Danh_Gia.xlsx"
 
-@st.cache_data(ttl=60)
+# Sửa ttl=60 thành ttl=0 để dữ liệu luôn được tải mới từ URL mỗi khi tải lại trang
+@st.cache_data(ttl=0)
 def load_data():
     return pd.read_excel(file_url, sheet_name=None)
 
@@ -92,7 +93,7 @@ def plot_stacked_chart(df_long, col_tc, list_cows, x_axis_title="Thành viên", 
                     ticks=False   
                 )),
         y=alt.Y('Điểm:Q', 
-                title="Điểm đánh giá", # Đã sửa tại đây
+                title="Điểm đánh giá", 
                 scale=alt.Scale(nice=False)), 
         color=alt.Color(f'{col_tc}:N', 
                         scale=alt.Scale(domain=list_cows, range=custom_colors), 
