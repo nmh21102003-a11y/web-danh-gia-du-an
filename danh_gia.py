@@ -6,7 +6,7 @@ st.set_page_config(layout="wide")
 st.title("📊 Hệ thống Theo dõi & Đánh giá Thành viên")
 
 # Dòng thông tin
-st.info("📌 **Note:** Tổng số phiếu đánh giá tối đa mỗi tuần đối với từng thành viên là 17 phiếu (6 phiếu Nhóm thường trực dự án + 6 phiếu Văn phòng dự án + 5 phiếu McKinsey).")
+st.info("📌 **Note:** Tổng số phiếu đánh giá tối đa mỗi tuần đối với từng thành viên là 17 phiếu.")
 
 file_url = "https://github.com/nmh21102003-a11y/web-danh-gia-du-an/raw/refs/heads/main/Du_Lieu_Danh_Gia.xlsx"
 
