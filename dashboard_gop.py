@@ -80,4 +80,46 @@ try:
     col_tc_global = df_first.columns[0]
     global_cows = df_first[col_tc_global].unique().tolist()
     
-    tab1, tab2 = st.tabs(["📅 Đ
+    tab1, tab2 = st.tabs(["📅 Đánh Giá Từng Tuần", "📈 Tổng Hợp Cá Nhân Theo Tuần"])
+    
+    # 1. TAB ĐÁNH GIÁ TỪNG TUẦN
+    with tab1:
+        # Sử dụng tên tuần ngắn cho dropdown
+        week_options = {get_short_week_name(k): k for k in all_sheets.keys()}
+        selected_display_week = st.selectbox("Chọn Tuần:", list(week_options.keys()))
+        selected_week = week_options[selected_display_week]
+        
+        df_raw = clean_sheet(all_sheets[selected_week])
+        col_tc = df_raw.columns[0]
+        df_long = df_raw.melt(id_vars=[col_tc], var_name='Thành viên', value_name='Điểm')
+        df_long['Điểm'] = pd.to_numeric(df_long['Điểm'], errors='coerce').fillna(0)
+        
+        st.altair_chart(plot_stacked_chart(df_long, col_tc, global_cows, x_axis_title="Thành viên", is_week_view=True), use_container_width=True)
+        with st.expander("📋 Số liệu chi tiết"): st.dataframe(df_raw, use_container_width=True)
+
+    # 2. TAB TỔNG HỢP CÁ NHÂN THEO TUẦN
+    with tab2:
+        selected_member = st.selectbox("🔍 Chọn Thành viên:", fixed_names)
+        trend_data = []
+        for week_name, sheet in all_sheets.items():
+            df_clean = clean_sheet(sheet)
+            tc_col = df_clean.columns[0]
+            df_m = df_clean.melt(id_vars=[tc_col], var_name='Thành viên', value_name='Điểm')
+            df_mem = df_m[df_m['Thành viên'] == selected_member]
+            
+            # Lấy tên tuần ngắn (VD: "Tuần 2")
+            short_week = get_short_week_name(week_name)
+            
+            for _, row in df_mem.iterrows():
+                trend_data.append({'Tuần': short_week, tc_col: row[tc_col], 'Điểm': row['Điểm']})
+        
+        df_trend = pd.DataFrame(trend_data)
+        if not df_trend.empty:
+            tc_col = df_trend.columns[1]
+            # use_container_width=False để thanh trượt ngang hoạt động khi số tuần tăng lên
+            st.altair_chart(plot_stacked_chart(df_trend, tc_col, global_cows, x_axis_title="Tuần", is_week_view=False), use_container_width=False)
+        else:
+            st.warning("Chưa có dữ liệu cho thành viên này.")
+
+except Exception as e:
+    st.error(f"Lỗi: {e}")
