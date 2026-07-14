@@ -5,7 +5,7 @@ import altair as alt
 st.set_page_config(layout="wide")
 st.title("📊 Hệ thống Theo dõi & Đánh giá Thành viên")
 
-# Cập nhật dòng thông tin chính xác theo yêu cầu của sếp
+# Dòng thông tin
 st.info("📌 **Thông tin:** Tổng số phiếu đánh giá tối đa mỗi tuần là 17 phiếu (6 phiếu Nhóm thường trực dự án + 6 phiếu Văn phòng dự án + 5 phiếu McKinsey).")
 
 file_url = "https://github.com/nmh21102003-a11y/web-danh-gia-du-an/raw/refs/heads/main/Du_Lieu_Danh_Gia.xlsx"
@@ -26,7 +26,7 @@ try:
     selected_option = st.sidebar.selectbox("Chu kỳ đánh giá:", sheet_options)
     
     if selected_option == "Tổng hợp tất cả các tuần":
-        # Logic gộp dữ liệu tự động
+        # Logic gộp dữ liệu
         df_list = []
         for name, sheet in all_sheets.items():
             clean_sheet = sheet.loc[:, ~sheet.columns.str.contains('^Unnamed')].dropna(how='all')
@@ -44,10 +44,9 @@ try:
         df_display = df_long.pivot_table(index=col_tieu_chi, columns='Thành viên', values='Điểm', aggfunc='sum').reset_index()
         cows = df_long[col_tieu_chi].unique().tolist()
         
-        # Ở tab Tổng hợp, max trục Y tỷ lệ theo số tuần để không bị kịch trần
         max_y = 17 * len(all_sheets)
     else:
-        # Chế độ xem từng tuần (Tự động cập nhật hoàn toàn khi có sheet mới)
+        # Chế độ xem từng tuần
         df_raw = all_sheets[selected_option]
         df_raw = df_raw.loc[:, ~df_raw.columns.str.contains('^Unnamed')].dropna(how='all')
         df_raw.columns = df_raw.columns.str.replace('\n', ' ').str.replace('\r', '').str.strip()
@@ -60,10 +59,8 @@ try:
         df_display = df_raw.copy()
         cows = df_raw[col_tieu_chi].unique().tolist()
         
-        # Mức max của trục Y cho từng tuần cố định là 17
         max_y = 17
 
-    # Sắp xếp lại thứ tự cột trong bảng số liệu chi tiết
     match_cols = [col for col in fixed_names if col in df_display.columns]
     other_cols = [col for col in df_display.columns if col != col_tieu_chi and col not in fixed_names]
     df_display = df_display[[col_tieu_chi] + match_cols + other_cols]
@@ -71,17 +68,17 @@ try:
     def chart(tieu_chi_list, color):
         data = df_long[df_long[col_tieu_chi].isin(tieu_chi_list)].groupby('Thành viên', as_index=False)['Điểm'].sum()
         
-        c = alt.Chart(data).mark_bar(size=40).encode(
+        # Đã thêm clip=True để cắt viền và bind_y=False để khóa zoom dọc
+        c = alt.Chart(data).mark_bar(size=40, clip=True).encode(
             x=alt.X('Thành viên:N', sort=fixed_names, axis=alt.Axis(labelAngle=0)),
-            # Sử dụng tickMinStep=1 và format="d" để tự động giãn số thông minh khi zoom
             y=alt.Y('Điểm:Q', 
                     scale=alt.Scale(domain=[0, max_y]), 
                     axis=alt.Axis(format="d", tickMinStep=1)), 
             color=alt.value(color)
-        ).properties(height=300).interactive()
+        ).properties(height=300).interactive(bind_y=False)
+        
         st.altair_chart(c, use_container_width=True)
 
-    # Hiển thị cấu trúc biểu đồ
     if len(cows) > 0:
         st.subheader("1️⃣ Tiêu chí 01")
         st.caption(f"{cows[0]}")
@@ -93,7 +90,6 @@ try:
         chart([cows[1]], '#3498db')
         
     if len(cows) > 2:
-        # Chỉ hiển thị duy nhất Tiêu chí 03
         st.subheader("3️⃣ Tiêu chí 03")
         st.caption(f"{cows[2]}")
         chart([cows[2]], '#e74c3c')
