@@ -44,9 +44,9 @@ def get_display_name(sheet_name):
             start_date = base_end_date + datetime.timedelta(days=1 + (n - 2) * 7)
             end_date = start_date + datetime.timedelta(days=6)
             
-            # Định dạng ngày (Ví dụ: 8/7/2026 thay vì 08/07/2026)
+            # Định dạng ngày: thêm số 0 ở đầu nếu < 10, tháng giữ nguyên không có số 0
             def format_dt(dt):
-                return f"{dt.day}/{dt.month}/{dt.year}"
+                return f"{dt.day:02d}/{dt.month}/{dt.year}"
             
             return f"{sheet_name_clean} (từ ngày {format_dt(start_date)} đến ngày {format_dt(end_date)})"
     
@@ -147,9 +147,4 @@ try:
         if not df_trend.empty:
             tc_col = df_trend.columns[1]
             # use_container_width=False để thanh trượt ngang hoạt động khi số tuần tăng lên
-            st.altair_chart(plot_stacked_chart(df_trend, tc_col, global_cows, x_axis_title="Tuần", is_week_view=False), use_container_width=False)
-        else:
-            st.warning("Chưa có dữ liệu cho thành viên này.")
-
-except Exception as e:
-    st.error(f"Lỗi: {e}")
+            st.altair_chart(plot_stacked_chart(df_trend, tc_col, global_cows, x_axis_title="Tuần", is_week_view
