@@ -6,7 +6,7 @@ st.set_page_config(layout="wide")
 st.title("📊 Bảng tổng hợp đánh giá nội bộ")
 
 # Ghi chú nguồn phiếu
-st.info("📌 **Ghi chú:** Tổng số phiếu đánh giá tối đa mỗi tuần là 17 phiếu (bao gồm 06 phiếu của nhóm thường trực dự án, 06 phiếu của nhóm văn phòng dự án, 05 phiếu của team McKinsey).")
+st.info("📌 **Ghi chú:** Tổng số phiếu đánh giá tối đa mỗi tuần là 17 phiếu (bao gồm 06 phiếu của nhóm thường trực dự án, 06 phiếu của nhóm văn phòng dự án, 05 phiếu của team McKinsey). Tiêu chí 1 & 2: Tiêu chí đóng góp. Tiêu chí 3 & 4: Tiêu chí cảnh báo.")
 
 file_url = "https://github.com/nmh21102003-a11y/web-danh-gia-du-an/raw/refs/heads/main/Du_Lieu_Danh_Gia.xlsx"
 
@@ -27,7 +27,7 @@ def clean_sheet(sheet):
 # Hàm vẽ biểu đồ
 def plot_stacked_chart(df_long, list_cows, col_tc):
     df_chart = df_long.copy()
-    # 2 tiêu chí cuối là tiêu chí cảnh báo -> nhân -1
+    # 2 tiêu chí cuối là tiêu chí cảnh báo -> nhân -1 để nằm dưới trục 0
     if len(list_cows) >= 4:
         tieu_cuc = list_cows[2:] 
         df_chart.loc[df_chart[col_tc].isin(tieu_cuc), 'Điểm'] *= -1
@@ -43,9 +43,6 @@ try:
     all_sheets = load_data()
     tab1, tab2, tab3 = st.tabs(["📅 Đánh Giá Từng Tuần", "📈 Tổng Hợp Cả Quá Trình", "👤 Xu Hướng Cá Nhân"])
     
-    # Ghi chú tiêu chí
-    criteria_note = "📌 **Thông tin tiêu chí:** Hai tiêu chí cuối là tiêu chí cảnh báo."
-
     with tab1:
         selected_week = st.selectbox("Chọn Tuần:", list(all_sheets.keys()))
         df_raw = clean_sheet(all_sheets[selected_week])
@@ -53,7 +50,6 @@ try:
         df_long = df_raw.melt(id_vars=[col_tc], var_name='Thành viên', value_name='Điểm')
         df_long['Điểm'] = pd.to_numeric(df_long['Điểm'], errors='coerce').fillna(0)
         st.altair_chart(plot_stacked_chart(df_long, df_raw[col_tc].unique().tolist(), col_tc), use_container_width=True)
-        st.info(criteria_note)
         with st.expander("Số liệu chi tiết"): st.dataframe(df_raw, use_container_width=True)
             
     with tab2:
@@ -64,11 +60,10 @@ try:
         df_agg_long['Điểm'] = pd.to_numeric(df_agg_long['Điểm'], errors='coerce').fillna(0)
         df_agg_grouped = df_agg_long.groupby([col_tc_agg, 'Thành viên'], as_index=False)['Điểm'].sum()
         st.altair_chart(plot_stacked_chart(df_agg_grouped, df_agg_grouped[col_tc_agg].unique().tolist(), col_tc_agg), use_container_width=True)
-        st.info(criteria_note)
         with st.expander("Số liệu tổng hợp"): st.dataframe(df_agg_grouped.pivot_table(index=col_tc_agg, columns='Thành viên', values='Điểm', aggfunc='sum'), use_container_width=True)
 
     with tab3:
-        st.subheader("Phong độ: Đóng góp (Cột) & Cảnh báo (Đường)")
+        st.subheader("Phong độ: Đóng góp & Cảnh báo")
         selected_member = st.selectbox("🔍 Chọn Thành viên:", fixed_names)
         trend_data = []
         for week_name, sheet in all_sheets.items():
@@ -86,7 +81,7 @@ try:
         bar = base.mark_bar(color='#2ecc71', opacity=0.6).encode(y=alt.Y('Đóng góp:Q', title="Điểm"))
         line = base.mark_line(color='#e74c3c', strokeWidth=3, point=True).encode(y=alt.Y('Cảnh báo:Q', title="Điểm"))
         st.altair_chart((bar + line).properties(height=400).interactive(), use_container_width=True)
-        st.info("💡 **Cách đọc:** Cột xanh càng cao là đóng góp càng tốt. Đường đỏ càng thấp là càng ít tiêu chí cảnh báo.")
+        st.info("💡 **Cách đọc:** Cột xanh (Tiêu chí 1&2) là đóng góp tốt. Đường đỏ (Tiêu chí 3&4) là tiêu chí cảnh báo.")
 
 except Exception as e:
     st.error(f"Lỗi: {e}")
