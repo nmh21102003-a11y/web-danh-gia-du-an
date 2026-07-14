@@ -52,4 +52,10 @@ def render_kpi_cards(df_long, list_cows, col_tc):
     st.divider()
 
 # 2️⃣ HÀM VẼ BIỂU ĐỒ CỘT CHỒNG + ĐƯỜNG TRUNG BÌNH
-def plot_stacked_chart(df_long, list_cows, col_tc
+def plot_stacked_chart(df_long, list_cows, col_tc, is_tong_hop=False):
+    df_chart = df_long.copy()
+    df_chart['Điểm Biểu Đồ'] = df_chart['Điểm']
+    
+    if len(list_cows) > 2:
+        tieu_cuc = list_cows[2:]
+        df_chart.loc[df_chart
