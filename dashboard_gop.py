@@ -37,11 +37,17 @@ def plot_stacked_chart(df_long, col_tc, x_axis_title="Thành viên", is_week_vie
     custom_colors = ['#3498db', '#2ecc71', '#f39c12', '#e74c3c']
     
     # Tính toán chiều rộng để tạo thanh cuộn ngang
-    width_per_bar = 80 if is_week_view else 120
-    chart_width = max(800, len(df_chart[x_axis_title].unique()) * width_per_bar)
+    unique_x = len(df_chart[x_axis_title].unique())
+    width_per_bar = 80 if is_week_view else 150 # Tab 2 (theo tuần) rộng hơn để không bị khít
+    chart_width = max(800, unique_x * width_per_bar)
+    
+    # Xoay chữ trục X 45 độ ở Tab 2 để không bị đè lên nhau
+    x_angle = 0 if is_week_view else -45
     
     return alt.Chart(df_chart).mark_bar(size=40).encode(
-        x=alt.X(f'{x_axis_title}:N', axis=alt.Axis(labelAngle=0)),
+        x=alt.X(f'{x_axis_title}:N', 
+                sort=fixed_names if is_week_view else None,
+                axis=alt.Axis(labelAngle=x_angle, labelOverlap=False)), # labelOverlap=False Ép hiện 100% chữ
         y=alt.Y('Điểm:Q', title="Số phiếu"),
         color=alt.Color(f'{col_tc}:N', 
                         scale=alt.Scale(range=custom_colors), 
@@ -77,6 +83,8 @@ try:
         df_trend = pd.DataFrame(trend_data)
         if not df_trend.empty:
             tc_col = df_trend.columns[1]
+            
+            # Quan trọng: Đặt use_container_width=False để thanh kéo ngang hoạt động
             st.altair_chart(plot_stacked_chart(df_trend, tc_col, x_axis_title="Tuần", is_week_view=False), use_container_width=False)
         else:
             st.warning("Chưa có dữ liệu cho thành viên này.")
