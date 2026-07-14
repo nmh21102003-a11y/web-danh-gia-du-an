@@ -55,25 +55,36 @@ def plot_stacked_chart(df_long, col_tc, list_cows, x_axis_title="Thành viên", 
     width_per_bar = 80 if is_week_view else 150 
     chart_width = max(800, unique_x * width_per_bar)
     
-    return alt.Chart(df_chart).mark_bar(size=40).encode(
+    chart = alt.Chart(df_chart).mark_bar(size=40).encode(
         x=alt.X(f'{x_axis_title}:N', 
                 sort=fixed_names if is_week_view else None,
                 axis=alt.Axis(
                     labelAngle=0, 
                     labelOverlap=False, 
-                    labelExpr="split(datum.value, ' ~ ')" # Tự động xuống dòng tại ký hiệu ~
+                    labelExpr="split(datum.value, ' ~ ')",
+                    domain=False, # Ẩn đường kẻ trục X mặc định ở dưới cùng
+                    ticks=False   # Ẩn vạch tick nhỏ
                 )),
-        y=alt.Y('Điểm:Q', title="Số phiếu"),
+        y=alt.Y('Điểm:Q', 
+                title="Số phiếu",
+                scale=alt.Scale(nice=False)), # Ép biểu đồ cắt bỏ khoảng trống thừa để số 0 nằm sát tên trục X
         color=alt.Color(f'{col_tc}:N', 
-                        scale=alt.Scale(domain=list_cows, range=custom_colors), # Cố định domain để không bao giờ mất tiêu chí & sai màu
+                        scale=alt.Scale(domain=list_cows, range=custom_colors), 
                         legend=alt.Legend(title="Tiêu chí đánh giá", orient='bottom', direction='vertical', labelLimit=1000)),
         tooltip=[x_axis_title, col_tc, 'Điểm']
-    ).properties(width=chart_width, height=500).interactive()
+    ).properties(width=chart_width, height=500)
+    
+    # Kẻ một đường chuẩn (baseline) đậm ngang mốc 0 để tạo cảm giác "số 0 sát trục"
+    rule = alt.Chart(pd.DataFrame({'Điểm': [0]})).mark_rule(color='#333333', strokeWidth=2).encode(
+        y='Điểm:Q'
+    )
+    
+    return (chart + rule).interactive()
 
 try:
     all_sheets = load_data()
     
-    # Lấy danh sách tiêu chí chuẩn toàn cục (Đảm bảo chú thích luôn đầy đủ)
+    # Lấy danh sách tiêu chí chuẩn toàn cục
     first_sheet = list(all_sheets.values())[0]
     df_first = clean_sheet(first_sheet)
     col_tc_global = df_first.columns[0]
@@ -111,7 +122,6 @@ try:
         df_trend = pd.DataFrame(trend_data)
         if not df_trend.empty:
             tc_col = df_trend.columns[1]
-            # use_container_width=False để thanh cuộn ngang xuất hiện nếu nhiều tuần
             st.altair_chart(plot_stacked_chart(df_trend, tc_col, global_cows, x_axis_title="Tuần", is_week_view=False), use_container_width=False)
         else:
             st.warning("Chưa có dữ liệu cho thành viên này.")
