@@ -24,6 +24,14 @@ fixed_names = [
 def clean_sheet(sheet):
     df = sheet.loc[:, ~sheet.columns.str.contains('^Unnamed')].dropna(how='all')
     df.columns = df.columns.str.replace('\n', ' ').str.replace('\r', '').str.strip()
+    
+    # Tự động thêm dấu chấm vào cuối Tiêu chí 04 nếu chưa có
+    if not df.empty:
+        tc_col = df.columns[0]
+        df[tc_col] = df[tc_col].apply(
+            lambda x: str(x).strip() + "." if isinstance(x, str) and "Tiêu chí 04" in str(x) and not str(x).strip().endswith(".") else x
+        )
+        
     return df
 
 # Hàm 1: Tự động tính ngày dành cho hộp chọn ở Tab 1
