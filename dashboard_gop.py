@@ -24,70 +24,64 @@ def clean_sheet(sheet):
     df.columns = df.columns.str.replace('\n', ' ').str.replace('\r', '').str.strip()
     return df
 
-# Hàm vẽ biểu đồ
-def plot_stacked_chart(df_long, col_tc, x_axis_title="Thành viên", is_week_view=True):
+# Hàm xử lý ngắt dòng thông minh cho tên Tuần dài
+def format_week_name(name):
+    if " - " in name:
+        return name.replace(" - ", " ~ ")
+    elif "Phiếu Đánh Giá " in name:
+        return name.replace("Phiếu Đánh Giá ", "Phiếu Đánh Giá ~ ")
+    elif "Tuần" in name and " " in name:
+        return name.replace("Tuần", "~ Tuần")
+    else:
+        words = name.split()
+        if len(words) > 2:
+            mid = len(words)//2
+            return " ".join(words[:mid]) + " ~ " + " ".join(words[mid:])
+        return name
+
+# Hàm vẽ biểu đồ với CỐ ĐỊNH màu và tiêu chí
+def plot_stacked_chart(df_long, col_tc, list_cows, x_axis_title="Thành viên", is_week_view=True):
     df_chart = df_long.copy()
     
-    # Logic âm dương (2 cuối là cảnh báo)
-    cows = df_chart[col_tc].unique()
-    if len(cows) >= 4:
-        tieu_cuc = cows[2:]
+    # Logic âm dương
+    if len(list_cows) >= 4:
+        tieu_cuc = list_cows[2:]
         df_chart.loc[df_chart[col_tc].isin(tieu_cuc), 'Điểm'] *= -1
     
     custom_colors = ['#3498db', '#2ecc71', '#f39c12', '#e74c3c']
     
-    # Tính toán chiều rộng để tạo thanh cuộn ngang
+    # Tính toán chiều rộng để thanh cuộn hoạt động tốt
     unique_x = len(df_chart[x_axis_title].unique())
-    width_per_bar = 80 if is_week_view else 150 # Tab 2 (theo tuần) rộng hơn để không bị khít
+    width_per_bar = 80 if is_week_view else 150 
     chart_width = max(800, unique_x * width_per_bar)
-    
-    # Xoay chữ trục X 45 độ ở Tab 2 để không bị đè lên nhau
-    x_angle = 0 if is_week_view else -45
     
     return alt.Chart(df_chart).mark_bar(size=40).encode(
         x=alt.X(f'{x_axis_title}:N', 
                 sort=fixed_names if is_week_view else None,
-                axis=alt.Axis(labelAngle=x_angle, labelOverlap=False)), # labelOverlap=False Ép hiện 100% chữ
+                axis=alt.Axis(
+                    labelAngle=0, 
+                    labelOverlap=False, 
+                    labelExpr="split(datum.value, ' ~ ')" # Tự động xuống dòng tại ký hiệu ~
+                )),
         y=alt.Y('Điểm:Q', title="Số phiếu"),
         color=alt.Color(f'{col_tc}:N', 
-                        scale=alt.Scale(range=custom_colors), 
-                        legend=alt.Legend(title="Tiêu chí", orient='bottom', direction='vertical', labelLimit=1000)),
+                        scale=alt.Scale(domain=list_cows, range=custom_colors), # Cố định domain để không bao giờ mất tiêu chí & sai màu
+                        legend=alt.Legend(title="Tiêu chí đánh giá", orient='bottom', direction='vertical', labelLimit=1000)),
         tooltip=[x_axis_title, col_tc, 'Điểm']
     ).properties(width=chart_width, height=500).interactive()
 
 try:
     all_sheets = load_data()
+    
+    # Lấy danh sách tiêu chí chuẩn toàn cục (Đảm bảo chú thích luôn đầy đủ)
+    first_sheet = list(all_sheets.values())[0]
+    df_first = clean_sheet(first_sheet)
+    col_tc_global = df_first.columns[0]
+    global_cows = df_first[col_tc_global].unique().tolist()
+    
     tab1, tab2 = st.tabs(["📅 Đánh Giá Từng Tuần", "📈 Tổng Hợp Cá Nhân Theo Tuần"])
     
+    # 1. TAB ĐÁNH GIÁ TỪNG TUẦN
     with tab1:
         selected_week = st.selectbox("Chọn Tuần:", list(all_sheets.keys()))
-        df_raw = clean_sheet(all_sheets[selected_week])
-        col_tc = df_raw.columns[0]
-        df_long = df_raw.melt(id_vars=[col_tc], var_name='Thành viên', value_name='Điểm')
-        df_long['Điểm'] = pd.to_numeric(df_long['Điểm'], errors='coerce').fillna(0)
-        
-        st.altair_chart(plot_stacked_chart(df_long, col_tc, x_axis_title="Thành viên", is_week_view=True), use_container_width=True)
-        with st.expander("📋 Số liệu chi tiết"): st.dataframe(df_raw, use_container_width=True)
-
-    with tab2:
-        selected_member = st.selectbox("🔍 Chọn Thành viên:", fixed_names)
-        trend_data = []
-        for week_name, sheet in all_sheets.items():
-            df_clean = clean_sheet(sheet)
-            tc_col = df_clean.columns[0]
-            df_m = df_clean.melt(id_vars=[tc_col], var_name='Thành viên', value_name='Điểm')
-            df_mem = df_m[df_m['Thành viên'] == selected_member]
-            for _, row in df_mem.iterrows():
-                trend_data.append({'Tuần': week_name, tc_col: row[tc_col], 'Điểm': row['Điểm']})
-        
-        df_trend = pd.DataFrame(trend_data)
-        if not df_trend.empty:
-            tc_col = df_trend.columns[1]
-            
-            # Quan trọng: Đặt use_container_width=False để thanh kéo ngang hoạt động
-            st.altair_chart(plot_stacked_chart(df_trend, tc_col, x_axis_title="Tuần", is_week_view=False), use_container_width=False)
-        else:
-            st.warning("Chưa có dữ liệu cho thành viên này.")
-
-except Exception as e:
-    st.error(f"Lỗi: {e}")
+        df_raw = clean_sheet(all_sheets[selected_week
