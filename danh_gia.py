@@ -5,8 +5,8 @@ import altair as alt
 st.set_page_config(layout="wide")
 st.title("📊 Hệ thống Theo dõi & Đánh giá Thành viên")
 
-# Vẫn giữ dòng text để giải thích ý nghĩa của con số 17
-st.info("📌 **Thông tin:** Tổng số phiếu đánh giá tối đa mỗi tuần là 17 phiếu (6 phiếu Nhóm TT + 6 phiếu VPDA + 5 phiếu McK).")
+# 1. Cập nhật dòng thông tin chính xác theo yêu cầu
+st.info("📌 **Thông tin:** Tổng số phiếu đánh giá tối đa mỗi tuần là 17 phiếu (6 phiếu Nhóm thường trực dự án + 6 phiếu Văn phòng dự án + 5 phiếu McKinsey).")
 
 file_url = "https://github.com/nmh21102003-a11y/web-danh-gia-du-an/raw/refs/heads/main/Du_Lieu_Danh_Gia.xlsx"
 
@@ -30,42 +30,56 @@ try:
         df_list = []
         for name, sheet in all_sheets.items():
             clean_sheet = sheet.loc[:, ~sheet.columns.str.contains('^Unnamed')].dropna(how='all')
+            clean_sheet.columns = clean_sheet.columns.str.replace('\n', ' ').str.replace('\r', '').str.strip()
             df_list.append(clean_sheet)
         
         df_raw = pd.concat(df_list, ignore_index=True)
         col_tieu_chi = df_raw.columns[0]
         
         df_long = df_raw.melt(id_vars=[col_tieu_chi], var_name='Thành viên', value_name='Điểm')
+        df_long['Thành viên'] = df_long['Thành viên'].str.replace('\n', ' ').str.replace('\r', '').str.strip()
         df_long['Điểm'] = pd.to_numeric(df_long['Điểm'], errors='coerce').fillna(0)
         df_long = df_long.groupby([col_tieu_chi, 'Thành viên'], as_index=False)['Điểm'].sum()
         
         df_display = df_long.pivot_table(index=col_tieu_chi, columns='Thành viên', values='Điểm', aggfunc='sum').reset_index()
         cows = df_long[col_tieu_chi].unique().tolist()
         
-        # Ở tab Tổng hợp, mức max của trục Y = 17 * tổng số tuần đang có
+        # Ở tab Tổng hợp, max trục Y = 17 * số tuần (Để đảm bảo đồ thị không bị cắt ngọn)
         max_y = 17 * len(all_sheets)
+        # Tạo danh sách các số nguyên từ 0 đến max_y để ghim trục
+        y_tick_values = list(range(0, max_y + 1))
     else:
         # Chế độ xem từng tuần
         df_raw = all_sheets[selected_option]
         df_raw = df_raw.loc[:, ~df_raw.columns.str.contains('^Unnamed')].dropna(how='all')
+        df_raw.columns = df_raw.columns.str.replace('\n', ' ').str.replace('\r', '').str.strip()
         col_tieu_chi = df_raw.columns[0]
         
         df_long = df_raw.melt(id_vars=[col_tieu_chi], var_name='Thành viên', value_name='Điểm')
+        df_long['Thành viên'] = df_long['Thành viên'].str.replace('\n', ' ').str.replace('\r', '').str.strip()
         df_long['Điểm'] = pd.to_numeric(df_long['Điểm'], errors='coerce').fillna(0)
         
         df_display = df_raw.copy()
         cows = df_raw[col_tieu_chi].unique().tolist()
         
-        # Mức max của trục Y cho từng tuần là 17
+        # Mức max của trục Y cho TỪNG TUẦN cố định là 17
         max_y = 17
+        # Chỉ hiển thị danh sách vạch số nguyên từ 0, 1, 2... đến 17
+        y_tick_values = list(range(0, 18))
+
+    match_cols = [col for col in fixed_names if col in df_display.columns]
+    other_cols = [col for col in df_display.columns if col != col_tieu_chi and col not in fixed_names]
+    df_display = df_display[[col_tieu_chi] + match_cols + other_cols]
 
     def chart(tieu_chi_list, color):
         data = df_long[df_long[col_tieu_chi].isin(tieu_chi_list)].groupby('Thành viên', as_index=False)['Điểm'].sum()
         
         c = alt.Chart(data).mark_bar(size=40).encode(
             x=alt.X('Thành viên:N', sort=fixed_names, axis=alt.Axis(labelAngle=0)),
-            # Bổ sung scale=alt.Scale(domain=[0, max_y]) để cố định trục Y
-            y=alt.Y('Điểm:Q', scale=alt.Scale(domain=[0, max_y]), axis=alt.Axis(format="d", tickMinStep=1)), 
+            # 2. KHÓA CỨNG TRỤC TUNG: range[0, max_y], ép các vạch bằng y_tick_values
+            y=alt.Y('Điểm:Q', 
+                    scale=alt.Scale(domain=[0, max_y], clamp=True), 
+                    axis=alt.Axis(values=y_tick_values, format="d", tickMinStep=1)), 
             color=alt.value(color)
         ).properties(height=300).interactive()
         st.altair_chart(c, use_container_width=True)
