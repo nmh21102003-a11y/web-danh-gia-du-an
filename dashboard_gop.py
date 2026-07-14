@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 import altair as alt
+import datetime
+import re
 
 st.set_page_config(layout="wide")
 st.title("📊 Bảng tổng hợp đánh giá nội bộ")
@@ -24,20 +26,37 @@ def clean_sheet(sheet):
     df.columns = df.columns.str.replace('\n', ' ').str.replace('\r', '').str.strip()
     return df
 
-# Hàm xử lý ngắt dòng thông minh cho tên Tuần dài
+# Hàm tự động tính khoảng ngày động dựa vào số Tuần
+def get_display_name(sheet_name):
+    sheet_name_clean = sheet_name.strip()
+    
+    # Nếu là Pre-work hoặc Tuần 1 thì gán cứng khoảng ngày đặc biệt
+    if "Pre-work" in sheet_name_clean or "Tuần 1" in sheet_name_clean:
+        return f"{sheet_name_clean} (từ ngày 22/6/2026 đến ngày 07/7/2026)"
+    
+    # Tìm số tuần tiếp theo (N >= 2)
+    match = re.search(r'Tuần\s*(\d+)', sheet_name_clean)
+    if match:
+        n = int(match.group(1))
+        if n >= 2:
+            base_end_date = datetime.date(2026, 7, 7)
+            # Tuần N bắt đầu từ ngày liền sau của Tuần N-1
+            start_date = base_end_date + datetime.timedelta(days=1 + (n - 2) * 7)
+            end_date = start_date + datetime.timedelta(days=6)
+            
+            # Định dạng ngày (Ví dụ: 8/7/2026 thay vì 08/07/2026)
+            def format_dt(dt):
+                return f"{dt.day}/{dt.month}/{dt.year}"
+            
+            return f"{sheet_name_clean} (từ ngày {format_dt(start_date)} đến ngày {format_dt(end_date)})"
+    
+    return sheet_name_clean
+
+# Hàm chuẩn bị ký hiệu ngắt dòng cho trục X ở Tab 2
 def format_week_name(name):
-    if " - " in name:
-        return name.replace(" - ", " ~ ")
-    elif "Phiếu Đánh Giá " in name:
-        return name.replace("Phiếu Đánh Giá ", "Phiếu Đánh Giá ~ ")
-    elif "Tuần" in name and " " in name:
-        return name.replace("Tuần", "~ Tuần")
-    else:
-        words = name.split()
-        if len(words) > 2:
-            mid = len(words)//2
-            return " ".join(words[:mid]) + " ~ " + " ".join(words[mid:])
-        return name
+    if " (" in name:
+        return name.replace(" (", " ~ (")
+    return name
 
 # Hàm vẽ biểu đồ với CỐ ĐỊNH màu và tiêu chí
 def plot_stacked_chart(df_long, col_tc, list_cows, x_axis_title="Thành viên", is_week_view=True):
@@ -52,7 +71,7 @@ def plot_stacked_chart(df_long, col_tc, list_cows, x_axis_title="Thành viên", 
     
     # Tính toán chiều rộng để thanh cuộn hoạt động tốt
     unique_x = len(df_chart[x_axis_title].unique())
-    width_per_bar = 80 if is_week_view else 150 
+    width_per_bar = 80 if is_week_view else 220 # Tăng không gian ngang để chứa tên tuần dài
     chart_width = max(800, unique_x * width_per_bar)
     
     chart = alt.Chart(df_chart).mark_bar(size=40).encode(
@@ -61,20 +80,20 @@ def plot_stacked_chart(df_long, col_tc, list_cows, x_axis_title="Thành viên", 
                 axis=alt.Axis(
                     labelAngle=0, 
                     labelOverlap=False, 
-                    labelExpr="split(datum.value, ' ~ ')",
-                    domain=False, # Ẩn đường kẻ trục X mặc định ở dưới cùng
-                    ticks=False   # Ẩn vạch tick nhỏ
+                    labelExpr="split(datum.value, ' ~ ')", # Tự động xuống dòng tại ký hiệu ~
+                    domain=False, 
+                    ticks=False   
                 )),
         y=alt.Y('Điểm:Q', 
                 title="Số phiếu",
-                scale=alt.Scale(nice=False)), # Ép biểu đồ cắt bỏ khoảng trống thừa để số 0 nằm sát tên trục X
+                scale=alt.Scale(nice=False)), # Ép trục Y cắt bỏ khoảng trống thừa để số 0 sát tên trục X
         color=alt.Color(f'{col_tc}:N', 
                         scale=alt.Scale(domain=list_cows, range=custom_colors), 
                         legend=alt.Legend(title="Tiêu chí đánh giá", orient='bottom', direction='vertical', labelLimit=1000)),
         tooltip=[x_axis_title, col_tc, 'Điểm']
     ).properties(width=chart_width, height=500)
     
-    # Kẻ một đường chuẩn (baseline) đậm ngang mốc 0 để tạo cảm giác "số 0 sát trục"
+    # Kẻ một đường chuẩn (baseline) màu đen tại mốc 0
     rule = alt.Chart(pd.DataFrame({'Điểm': [0]})).mark_rule(color='#333333', strokeWidth=2).encode(
         y='Điểm:Q'
     )
@@ -94,7 +113,11 @@ try:
     
     # 1. TAB ĐÁNH GIÁ TỪNG TUẦN
     with tab1:
-        selected_week = st.selectbox("Chọn Tuần:", list(all_sheets.keys()))
+        # Sử dụng tên tuần động có kèm khoảng ngày cho dropdown
+        week_options = {get_display_name(k): k for k in all_sheets.keys()}
+        selected_display_week = st.selectbox("Chọn Tuần:", list(week_options.keys()))
+        selected_week = week_options[selected_display_week]
+        
         df_raw = clean_sheet(all_sheets[selected_week])
         col_tc = df_raw.columns[0]
         df_long = df_raw.melt(id_vars=[col_tc], var_name='Thành viên', value_name='Điểm')
@@ -113,8 +136,9 @@ try:
             df_m = df_clean.melt(id_vars=[tc_col], var_name='Thành viên', value_name='Điểm')
             df_mem = df_m[df_m['Thành viên'] == selected_member]
             
-            # Đổi tên tuần để nó xuống dòng gọn gàng
-            display_week = format_week_name(week_name)
+            # Tạo tên tuần kèm ngày động và chèn ký tự ngắt dòng
+            display_week_full = get_display_name(week_name)
+            display_week = format_week_name(display_week_full)
             
             for _, row in df_mem.iterrows():
                 trend_data.append({'Tuần': display_week, tc_col: row[tc_col], 'Điểm': row['Điểm']})
@@ -122,6 +146,7 @@ try:
         df_trend = pd.DataFrame(trend_data)
         if not df_trend.empty:
             tc_col = df_trend.columns[1]
+            # use_container_width=False để thanh trượt ngang hoạt động khi số tuần tăng lên
             st.altair_chart(plot_stacked_chart(df_trend, tc_col, global_cows, x_axis_title="Tuần", is_week_view=False), use_container_width=False)
         else:
             st.warning("Chưa có dữ liệu cho thành viên này.")
