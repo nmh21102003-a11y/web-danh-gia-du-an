@@ -74,6 +74,25 @@ def plot_stacked_chart(df_long, col_tc, list_cows, x_axis_title="Thành viên", 
     if len(list_cows) >= 4:
         tieu_cuc = list_cows[2:]
         df_chart.loc[df_chart[col_tc].isin(tieu_cuc), 'Điểm'] *= -1
+        
+    # --- PHẦN TÍNH TOÁN ĐỂ CĂN GIỮA SỐ (Tuyệt đối không ảnh hưởng tới code gốc) ---
+    df_chart['tc_cat'] = pd.Categorical(df_chart[col_tc], categories=list_cows, ordered=True)
+    df_chart = df_chart.sort_values([x_axis_title, 'tc_cat'])
+    
+    df_chart['mid_y'] = 0.0
+    for member in df_chart[x_axis_title].unique():
+        member_df = df_chart[df_chart[x_axis_title] == member]
+        pos_cumsum = 0
+        neg_cumsum = 0
+        for idx, row in member_df.iterrows():
+            val = row['Điểm']
+            if val > 0:
+                df_chart.loc[idx, 'mid_y'] = pos_cumsum + (val / 2)
+                pos_cumsum += val
+            elif val < 0:
+                df_chart.loc[idx, 'mid_y'] = neg_cumsum + (val / 2)
+                neg_cumsum += val
+    # -----------------------------------------------------------------------------
     
     custom_colors = ['#3498db', '#2ecc71', '#f39c12', '#e74c3c']
     
@@ -92,7 +111,11 @@ def plot_stacked_chart(df_long, col_tc, list_cows, x_axis_title="Thành viên", 
                     labelExpr="split(datum.value, ' ~ ')",
                     domain=False, 
                     ticks=False   
-                )),
+                ))
+    )
+    
+    # Lớp cột
+    bars = base.mark_bar(size=40).encode(
         y=alt.Y('Điểm:Q', 
                 title="Điểm đánh giá", 
                 scale=alt.Scale(nice=False)), 
@@ -102,11 +125,9 @@ def plot_stacked_chart(df_long, col_tc, list_cows, x_axis_title="Thành viên", 
         tooltip=[x_axis_title, col_tc, 'Điểm']
     )
     
-    # Lớp cột
-    bars = base.mark_bar(size=40)
-    
-    # Lớp chữ: Ép cứng màu trắng, canh giữa, loại bỏ số 0
+    # Lớp chữ: Ép cứng màu trắng, canh giữa, loại bỏ số 0, TRỎ VÀO TỌA ĐỘ mid_y
     text = base.mark_text(baseline='middle', align='center', fontWeight='bold').encode(
+        y=alt.Y('mid_y:Q', stack=None, title="Điểm đánh giá"), # Sử dụng tọa độ giữa đã tính
         text=alt.condition(alt.datum.Điểm != 0, 'Điểm:Q', alt.value('')),
         color=alt.value('white') 
     )
