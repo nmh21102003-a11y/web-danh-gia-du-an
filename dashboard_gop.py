@@ -117,7 +117,7 @@ def plot_stacked_chart(df_long, col_tc, list_cows, x_axis_title="Thành viên", 
                 ))
     )
     
-    # Lớp cột: Bắt buộc Altair vẽ đúng trật tự tính toán thông qua thuộc tính 'order'
+    # Lớp cột
     bars = base.mark_bar(size=40).encode(
         y=alt.Y('Điểm:Q', 
                 title="Điểm đánh giá", 
@@ -129,10 +129,10 @@ def plot_stacked_chart(df_long, col_tc, list_cows, x_axis_title="Thành viên", 
         tooltip=[x_axis_title, col_tc, 'Điểm']
     )
     
-    # Lớp chữ: Giữ nguyên dấu trừ, căn giữa tuyệt đối
+    # Lớp chữ: Thêm điều kiện lọc chặt chẽ để triệt tiêu hoàn toàn chữ "null"
     text = base.mark_text(baseline='middle', align='center', fontWeight='bold').encode(
         y=alt.Y('mid_y:Q', stack=None, title="Điểm đánh giá"), 
-        text=alt.condition(alt.datum.Điểm != 0, alt.Text('Điểm:Q', format='d'), alt.value('')),
+        text=alt.condition((alt.datum.Điểm != 0) & (alt.datum.Điểm.isna() == False), alt.Text('Điểm:Q', format='d'), alt.value('')),
         color=alt.value('white') 
     )
     
