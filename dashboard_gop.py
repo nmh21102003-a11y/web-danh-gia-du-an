@@ -82,7 +82,8 @@ def plot_stacked_chart(df_long, col_tc, list_cows, x_axis_title="Thành viên", 
     width_per_bar = 80 if is_week_view else 140 
     chart_width = max(800, unique_x * width_per_bar)
     
-    chart = alt.Chart(df_chart).mark_bar(size=40).encode(
+    # Dựng lớp nền (Base) cho biểu đồ
+    base = alt.Chart(df_chart).encode(
         x=alt.X(f'{x_axis_title}:N', 
                 sort=fixed_names if is_week_view else None,
                 axis=alt.Axis(
@@ -99,8 +100,21 @@ def plot_stacked_chart(df_long, col_tc, list_cows, x_axis_title="Thành viên", 
                         scale=alt.Scale(domain=list_cows, range=custom_colors), 
                         legend=alt.Legend(title="Tiêu chí đánh giá", orient='bottom', direction='vertical', labelLimit=1000)),
         tooltip=[x_axis_title, col_tc, 'Điểm']
-    ).properties(width=chart_width, height=500)
+    )
     
+    # Lớp cột
+    bars = base.mark_bar(size=40)
+    
+    # Lớp chữ: Ép cứng màu trắng, canh giữa, loại bỏ số 0
+    text = base.mark_text(baseline='middle', align='center', fontWeight='bold').encode(
+        text=alt.condition(alt.datum.Điểm != 0, 'Điểm:Q', alt.value('')),
+        color=alt.value('white') 
+    )
+    
+    # Gộp 2 lớp lại
+    chart = (bars + text).properties(width=chart_width, height=500)
+    
+    # Đường kẻ đen mốc 0
     rule = alt.Chart(pd.DataFrame({'Điểm': [0]})).mark_rule(color='#333333', strokeWidth=2).encode(
         y='Điểm:Q'
     )
