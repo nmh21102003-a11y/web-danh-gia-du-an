@@ -82,9 +82,6 @@ def plot_stacked_chart(df_long, col_tc, list_cows, x_axis_title="Thành viên", 
     # 2. Sắp xếp lại dataframe theo trật tự này
     df_chart = df_chart.sort_values([x_axis_title, 'tc_cat_sort'], ascending=[True, True])
     
-    # --- CHÌA KHÓA Ở ĐÂY: Tạo cột giá trị tuyệt đối để loại bỏ dấu trừ làm lệch số ---
-    df_chart['Điểm_Text'] = df_chart['Điểm'].abs()
-    
     # 3. Tính toán vị trí giữa của từng màu (mid_y)
     df_chart['mid_y'] = 0.0
     for member in df_chart[x_axis_title].unique():
@@ -132,10 +129,10 @@ def plot_stacked_chart(df_long, col_tc, list_cows, x_axis_title="Thành viên", 
         tooltip=[x_axis_title, col_tc, 'Điểm']
     )
     
-    # Lớp chữ: Sử dụng Điểm_Text (không có dấu trừ) để các số được thẳng hàng tuyệt đối
+    # Lớp chữ: Giữ nguyên dấu trừ, căn giữa tuyệt đối
     text = base.mark_text(baseline='middle', align='center', fontWeight='bold').encode(
         y=alt.Y('mid_y:Q', stack=None, title="Điểm đánh giá"), 
-        text=alt.condition(alt.datum.Điểm != 0, 'Điểm_Text:Q', alt.value('')),
+        text=alt.condition(alt.datum.Điểm != 0, alt.Text('Điểm:Q', format='d'), alt.value('')),
         color=alt.value('white') 
     )
     
