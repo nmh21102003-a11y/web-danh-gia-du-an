@@ -75,7 +75,6 @@ def plot_stacked_chart(df_long, col_tc, list_cows, x_axis_title="Thành viên", 
         tieu_cuc = list_cows[2:]
         df_chart.loc[df_chart[col_tc].isin(tieu_cuc), 'Điểm'] *= -1
         
-    # --- PHẦN TÍNH TOÁN ĐỂ CĂN GIỮA SỐ TUYỆT ĐỐI VÀ BÙ TRỪ QUANG HỌC ---
     # 1. Gắn số thứ tự cho các tiêu chí để đảm bảo trật tự cố định
     cow_order = {cow: i for i, cow in enumerate(list_cows)}
     df_chart['tc_cat_sort'] = df_chart[col_tc].map(cow_order)
@@ -83,7 +82,10 @@ def plot_stacked_chart(df_long, col_tc, list_cows, x_axis_title="Thành viên", 
     # 2. Sắp xếp lại dataframe theo trật tự này
     df_chart = df_chart.sort_values([x_axis_title, 'tc_cat_sort'], ascending=[True, True])
     
-    # 3. Tính toán vị trí giữa của từng màu (mid_y) + Bù trừ sai lệch quang học
+    # --- CHÌA KHÓA Ở ĐÂY: Tạo cột giá trị tuyệt đối để loại bỏ dấu trừ làm lệch số ---
+    df_chart['Điểm_Text'] = df_chart['Điểm'].abs()
+    
+    # 3. Tính toán vị trí giữa của từng màu (mid_y)
     df_chart['mid_y'] = 0.0
     for member in df_chart[x_axis_title].unique():
         mask = df_chart[x_axis_title] == member
@@ -92,14 +94,11 @@ def plot_stacked_chart(df_long, col_tc, list_cows, x_axis_title="Thành viên", 
         for idx, row in df_chart[mask].iterrows():
             val = row['Điểm']
             if val > 0:
-                # Cộng thêm 0.05 để đẩy nhẹ số lên bù lại độ dày đường viền 0
-                df_chart.loc[idx, 'mid_y'] = pos_cumsum + (val / 2.0) + 0.05
+                df_chart.loc[idx, 'mid_y'] = pos_cumsum + (val / 2.0)
                 pos_cumsum += val
             elif val < 0:
-                # Trừ đi 0.05 để đẩy nhẹ số xuống bù lại độ dày đường viền 0
-                df_chart.loc[idx, 'mid_y'] = neg_cumsum + (val / 2.0) - 0.05
+                df_chart.loc[idx, 'mid_y'] = neg_cumsum + (val / 2.0)
                 neg_cumsum += val
-    # -------------------------------------------------------------------
     
     custom_colors = ['#3498db', '#2ecc71', '#f39c12', '#e74c3c']
     
@@ -133,10 +132,10 @@ def plot_stacked_chart(df_long, col_tc, list_cows, x_axis_title="Thành viên", 
         tooltip=[x_axis_title, col_tc, 'Điểm']
     )
     
-    # Lớp chữ: Canh giữa, màu trắng, loại bỏ số 0, trỏ vào đúng tọa độ mid_y đã bù trừ
+    # Lớp chữ: Sử dụng Điểm_Text (không có dấu trừ) để các số được thẳng hàng tuyệt đối
     text = base.mark_text(baseline='middle', align='center', fontWeight='bold').encode(
         y=alt.Y('mid_y:Q', stack=None, title="Điểm đánh giá"), 
-        text=alt.condition(alt.datum.Điểm != 0, 'Điểm:Q', alt.value('')),
+        text=alt.condition(alt.datum.Điểm != 0, 'Điểm_Text:Q', alt.value('')),
         color=alt.value('white') 
     )
     
