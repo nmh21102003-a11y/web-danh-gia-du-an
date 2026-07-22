@@ -96,6 +96,9 @@ def plot_stacked_chart(df_long, col_tc, list_cows, x_axis_title="Thành viên", 
             elif val < 0:
                 df_chart.loc[idx, 'mid_y'] = neg_cumsum + (val / 2.0)
                 neg_cumsum += val
+                
+    # Lọc bỏ hoàn toàn điểm bằng 0 trước khi vẽ chữ để tránh lỗi và triệt tiêu chữ "null"
+    df_text = df_chart[df_chart['Điểm'] != 0].copy()
     
     custom_colors = ['#3498db', '#2ecc71', '#f39c12', '#e74c3c']
     
@@ -104,7 +107,7 @@ def plot_stacked_chart(df_long, col_tc, list_cows, x_axis_title="Thành viên", 
     width_per_bar = 80 if is_week_view else 140 
     chart_width = max(800, unique_x * width_per_bar)
     
-    # Dựng lớp nền (Base) cho biểu đồ
+    # Dựng lớp nền (Base) cho biểu đồ cột
     base = alt.Chart(df_chart).encode(
         x=alt.X(f'{x_axis_title}:N', 
                 sort=fixed_names if is_week_view else None,
@@ -129,10 +132,11 @@ def plot_stacked_chart(df_long, col_tc, list_cows, x_axis_title="Thành viên", 
         tooltip=[x_axis_title, col_tc, 'Điểm']
     )
     
-    # Lớp chữ: Thêm điều kiện lọc chặt chẽ để triệt tiêu hoàn toàn chữ "null"
-    text = base.mark_text(baseline='middle', align='center', fontWeight='bold').encode(
+    # Lớp chữ riêng biệt sử dụng df_text đã lọc sạch điểm 0
+    text = alt.Chart(df_text).mark_text(baseline='middle', align='center', fontWeight='bold').encode(
+        x=alt.X(f'{x_axis_title}:N', sort=fixed_names if is_week_view else None),
         y=alt.Y('mid_y:Q', stack=None, title="Điểm đánh giá"), 
-        text=alt.condition((alt.datum.Điểm != 0) & (alt.datum.Điểm.isna() == False), alt.Text('Điểm:Q', format='d'), alt.value('')),
+        text=alt.Text('Điểm:Q', format='d'),
         color=alt.value('white') 
     )
     
