@@ -593,7 +593,6 @@ try:
             st.caption(
                 "Cách tính: **Điểm xếp hạng = tổng phiếu đóng góp "
                 "(Tiêu chí 1 + 2) − tổng phiếu cảnh báo (Tiêu chí 3 + 4)**. "
-                "Một kỳ đánh giá được tính vào tháng chứa ngày kết thúc của kỳ."
             )
 
             top_members = ranking.head(3).to_dict("records")
