@@ -62,8 +62,8 @@ st.info(
 )
 
 file_url = (
-    "https://github.com/nmh21102003-a11y/web-danh-gia-du-an/"
-    "raw/refs/heads/main/Du_Lieu_Danh_Gia.xlsx"
+    "https://raw.githubusercontent.com/"
+    "nmh21102003-a11y/web-danh-gia-du-an/main/Du_Lieu_Danh_Gia.xlsx"
 )
 
 CONFIG_SHEET_NAMES = {
@@ -86,10 +86,16 @@ fixed_names = [
 ]
 
 
-@st.cache_data(ttl=300)
-def load_data():
-    """Tải toàn bộ workbook từ GitHub; tự làm mới sau tối đa 5 phút."""
-    return pd.read_excel(file_url, sheet_name=None)
+@st.cache_data(ttl=60)
+def load_data(cache_key):
+    """
+    Tải workbook mới nhất từ GitHub.
+
+    cache_key thay đổi mỗi phút và được gắn vào URL để tránh GitHub/Streamlit
+    tiếp tục trả về bản Excel cũ sau khi file đã được cập nhật.
+    """
+    fresh_url = f"{file_url}?v={cache_key}"
+    return pd.read_excel(fresh_url, sheet_name=None, engine="openpyxl")
 
 
 def remove_accents(value):
@@ -215,8 +221,10 @@ def parse_month_value(value):
 
 
 def find_config_sheet(all_sheets):
+    """Nhận diện sheet cấu hình kể cả khi tên có dấu, không dấu hoặc dấu gạch dưới."""
     for sheet_name in all_sheets:
-        if normalized_key(sheet_name) in CONFIG_SHEET_NAMES:
+        key = normalized_key(sheet_name).replace("_", " ")
+        if key == "cau hinh thang":
             return sheet_name
     return None
 
@@ -784,7 +792,8 @@ if st.sidebar.button("🔄 Làm mới dữ liệu", use_container_width=True):
 st.sidebar.caption("Dữ liệu được tự làm mới sau tối đa 5 phút.")
 
 try:
-    all_sheets = load_data()
+    cache_key = int(datetime.datetime.now().timestamp() // 60)
+    all_sheets = load_data(cache_key)
 
     if not all_sheets:
         st.warning("File Excel chưa có sheet dữ liệu.")
@@ -955,9 +964,12 @@ try:
 
     with tab3:
         if config_sheet_name is None:
+            sheet_list = ", ".join(f"**{name}**" for name in all_sheets.keys())
             st.warning(
-                "Chưa có sheet **Cấu hình tháng**. Hãy dùng file Excel mẫu và khai báo "
-                "tháng xếp hạng cho từng sheet dữ liệu."
+                "Ứng dụng chưa đọc thấy sheet **Cấu hình tháng** trong bản Excel đang tải. "
+                f"Các sheet đọc được hiện tại: {sheet_list}. "
+                "Hãy bấm **🔄 Làm mới dữ liệu**; nếu danh sách vẫn thiếu sheet cấu hình, "
+                "kiểm tra lại file Du_Lieu_Danh_Gia.xlsx trên nhánh main."
             )
         elif not month_config:
             st.warning(
