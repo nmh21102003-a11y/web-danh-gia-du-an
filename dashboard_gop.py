@@ -1,3 +1,4 @@
+# BẢN FIX 02/08/2026: đổi tiêu đề sang tuần và hiển thị dấu âm cho tiêu chí 3, 4
 import datetime
 import re
 import unicodedata
@@ -134,7 +135,7 @@ def clean_sheet(sheet):
 
 
 def get_week_period(sheet_name):
-    """Tính ngày bắt đầu và ngày kết thúc chỉ để hiển thị tên kỳ."""
+    """Tính ngày bắt đầu và ngày kết thúc chỉ để hiển thị tên tuần."""
     name = sheet_name.strip()
     is_week_one = re.search(r"Tuần\s*0?1(?!\d)", name, flags=re.IGNORECASE)
 
@@ -160,7 +161,7 @@ def format_date(date_value):
 
 
 def get_display_name(sheet_name):
-    """Tên kỳ đầy đủ trong hộp chọn của tab đánh giá tuần."""
+    """Tên tuần đầy đủ trong hộp chọn của tab đánh giá tuần."""
     name = sheet_name.strip()
     clean_name = name
 
@@ -179,7 +180,7 @@ def get_display_name(sheet_name):
 
 
 def get_split_week_name(sheet_name):
-    """Rút gọn tên kỳ để hiển thị trên biểu đồ."""
+    """Rút gọn tên tuần để hiển thị trên biểu đồ."""
     name = sheet_name.strip()
     if "Phiếu Đánh Giá" in name:
         suffix = name.split("Phiếu Đánh Giá")[-1].strip()
@@ -240,7 +241,7 @@ def build_month_config(config_sheet):
 
     sheet_column = column_map.get("ten sheet")
     month_column = column_map.get("thang xep hang")
-    order_column = column_map.get("thu tu ky")
+    order_column = column_map.get("thu tu tuan") or column_map.get("thu tu ky")
     include_column = column_map.get("tinh vao bxh")
 
     if sheet_column is None or month_column is None:
@@ -356,7 +357,7 @@ def build_monthly_ranking(evaluation_sheets, month_config):
                     "Thành viên": member,
                     "Phiếu đóng góp": float(positive_votes.get(member, 0)),
                     "Phiếu cảnh báo": float(warning_votes.get(member, 0)),
-                    "Số kỳ": 1,
+                    "Số tuần": 1,
                 }
             )
 
@@ -370,7 +371,7 @@ def build_monthly_ranking(evaluation_sheets, month_config):
             {
                 "Phiếu đóng góp": "sum",
                 "Phiếu cảnh báo": "sum",
-                "Số kỳ": "sum",
+                "Số tuần": "sum",
             }
         )
     )
@@ -463,7 +464,7 @@ def prepare_stacked_data(df_long, criterion_col, list_criteria, category_col):
                 df_chart.loc[index, "Vị trí nhãn"] = negative_sum + value / 2.0
                 negative_sum += value
 
-    df_chart["Nhãn phiếu"] = df_chart["Số phiếu"].round(0).astype(int)
+    df_chart["Nhãn phiếu"] = df_chart["Giá trị biểu đồ"].round(0).astype(int)
     return df_chart
 
 
@@ -499,7 +500,7 @@ def plot_stacked_chart(
     tooltip = [
         alt.Tooltip(f"{category_col}:N"),
         alt.Tooltip(f"{criterion_col}:N"),
-        alt.Tooltip("Số phiếu:Q", format=".0f"),
+        alt.Tooltip("Giá trị biểu đồ:Q", title="Số phiếu", format=".0f"),
     ]
 
     if mobile_mode:
@@ -629,9 +630,9 @@ def build_member_trend(evaluation_sheets, month_config, selected_member):
 
         records.append(
             {
-                "Kỳ": get_split_week_name(period_name),
+                "Tuần": get_split_week_name(period_name),
                 "Tên sheet": period_name,
-                "Thứ tự kỳ": order_value,
+                "Thứ tự tuần": order_value,
                 "Phiếu đóng góp": float(positive),
                 "Phiếu cảnh báo": float(warning),
                 "Điểm tuần": float(positive - warning),
@@ -642,7 +643,7 @@ def build_member_trend(evaluation_sheets, month_config, selected_member):
     if trend.empty:
         return trend
 
-    trend = trend.sort_values(["Thứ tự kỳ", "Tên sheet"]).reset_index(drop=True)
+    trend = trend.sort_values(["Thứ tự tuần", "Tên sheet"]).reset_index(drop=True)
     changes = trend["Điểm tuần"].diff()
     comparison = []
     for value in changes:
@@ -654,20 +655,20 @@ def build_member_trend(evaluation_sheets, month_config, selected_member):
             comparison.append(f"↓ {value:g}")
         else:
             comparison.append("Không đổi")
-    trend["So với kỳ trước"] = comparison
+    trend["So với tuần trước"] = comparison
     return trend
 
 
 def plot_member_score_trend(member_trend, mobile_mode=False):
     chart_data = member_trend.copy()
-    period_sort = chart_data["Kỳ"].tolist()
+    period_sort = chart_data["Tuần"].tolist()
 
     line = (
         alt.Chart(chart_data)
         .mark_line(point=True, strokeWidth=3)
         .encode(
             x=alt.X(
-                "Kỳ:N",
+                "Tuần:N",
                 sort=period_sort,
                 title=None,
                 axis=alt.Axis(
@@ -678,7 +679,7 @@ def plot_member_score_trend(member_trend, mobile_mode=False):
             ),
             y=alt.Y("Điểm tuần:Q", title="Điểm tuần"),
             tooltip=[
-                alt.Tooltip("Kỳ:N"),
+                alt.Tooltip("Tuần:N"),
                 alt.Tooltip("Phiếu đóng góp:Q", format=".0f"),
                 alt.Tooltip("Phiếu cảnh báo:Q", format=".0f"),
                 alt.Tooltip("Điểm tuần:Q", format=".0f"),
@@ -690,7 +691,7 @@ def plot_member_score_trend(member_trend, mobile_mode=False):
         alt.Chart(chart_data)
         .mark_text(dy=-12, fontWeight="bold")
         .encode(
-            x=alt.X("Kỳ:N", sort=period_sort),
+            x=alt.X("Tuần:N", sort=period_sort),
             y=alt.Y("Điểm tuần:Q"),
             text=alt.Text("Điểm tuần:Q", format=".0f"),
         )
@@ -828,7 +829,7 @@ try:
         }
         week_labels = list(week_options.keys())
         selected_display_week = st.selectbox(
-            "Chọn kỳ đánh giá:",
+            "Chọn tuần đánh giá:",
             week_labels,
             index=len(week_labels) - 1,
             key="selected_week",
@@ -889,7 +890,7 @@ try:
             for _, row in df_member.iterrows():
                 stacked_records.append(
                     {
-                        "Kỳ": display_period,
+                        "Tuần": display_period,
                         criterion_col: row[criterion_col],
                         "Số phiếu": row["Số phiếu"],
                     }
@@ -898,13 +899,13 @@ try:
         df_stacked_trend = pd.DataFrame(stacked_records)
         if not df_stacked_trend.empty:
             criterion_col = df_stacked_trend.columns[1]
-            st.subheader("Cơ cấu phiếu theo từng kỳ")
+            st.subheader("Số phiếu theo từng tuần")
             st.altair_chart(
                 plot_stacked_chart(
                     df_stacked_trend,
                     criterion_col,
                     global_criteria,
-                    category_col="Kỳ",
+                    category_col="Tuần",
                     category_sort=period_label_order,
                     mobile_mode=mobile_mode,
                 ),
@@ -918,7 +919,7 @@ try:
             )
 
             if not member_trend.empty:
-                st.subheader("Xu hướng điểm qua các kỳ")
+                st.subheader("Xu hướng điểm qua các tuần")
                 st.caption(
                     "Điểm tuần = phiếu đóng góp (Tiêu chí 1 + 2) − "
                     "phiếu cảnh báo (Tiêu chí 3 + 4)."
@@ -930,11 +931,11 @@ try:
 
                 trend_table = member_trend[
                     [
-                        "Kỳ",
+                        "Tuần",
                         "Phiếu đóng góp",
                         "Phiếu cảnh báo",
                         "Điểm tuần",
-                        "So với kỳ trước",
+                        "So với tuần trước",
                     ]
                 ].copy()
                 for column in ["Phiếu đóng góp", "Phiếu cảnh báo", "Điểm tuần"]:
@@ -972,12 +973,12 @@ try:
             ]
             if unconfigured_periods:
                 st.warning(
-                    "Các kỳ sau chưa được tính vào bảng xếp hạng vì chưa khai báo tháng: "
+                    "Các tuần sau chưa được tính vào bảng xếp hạng vì chưa khai báo tháng: "
                     + ", ".join(unconfigured_periods)
                 )
 
             if monthly_data.empty:
-                st.warning("Chưa có kỳ đánh giá nào được khai báo tháng hợp lệ.")
+                st.warning("Chưa có tuần đánh giá nào được khai báo tháng hợp lệ.")
             else:
                 month_keys = sorted(
                     monthly_data["Tháng"].unique().tolist(),
@@ -1039,7 +1040,7 @@ try:
                     "Phiếu đóng góp",
                     "Phiếu cảnh báo",
                     "Điểm xếp hạng",
-                    "Số kỳ",
+                    "Số tuần",
                     "So với tháng trước",
                 ]
                 display_ranking = ranking[display_columns].copy()
@@ -1048,7 +1049,7 @@ try:
                     "Phiếu đóng góp",
                     "Phiếu cảnh báo",
                     "Điểm xếp hạng",
-                    "Số kỳ",
+                    "Số tuần",
                 ]:
                     display_ranking[column] = display_ranking[column].map(format_number)
                 st.dataframe(
@@ -1057,14 +1058,14 @@ try:
                     hide_index=True,
                 )
 
-                number_of_periods = int(ranking["Số kỳ"].max()) if not ranking.empty else 0
+                number_of_periods = int(ranking["Số tuần"].max()) if not ranking.empty else 0
                 comparison_note = (
                     f"; so sánh với {format_month(previous_month)}"
                     if previous_month is not None
                     else ""
                 )
                 st.caption(
-                    f"Dữ liệu tháng này gồm {number_of_periods} kỳ đánh giá"
+                    f"Dữ liệu tháng này gồm {number_of_periods} tuần đánh giá"
                     f"{comparison_note}."
                 )
 
