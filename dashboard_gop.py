@@ -377,7 +377,6 @@ def build_monthly_ranking(evaluation_sheets, month_config):
     monthly["Điểm xếp hạng"] = (
         monthly["Phiếu đóng góp"] - monthly["Phiếu cảnh báo"]
     )
-    monthly["Điểm TB/kỳ"] = monthly["Điểm xếp hạng"] / monthly["Số kỳ"]
     return monthly
 
 
@@ -396,7 +395,7 @@ def prepare_ranking_table(monthly_data, selected_month):
 
 
 def add_previous_month_comparison(ranking, monthly_data, selected_month):
-    """So sánh hạng và điểm trung bình mỗi kỳ với tháng liền trước có dữ liệu."""
+    """So sánh thứ hạng với tháng liền trước có dữ liệu."""
     month_keys = sorted(monthly_data["Tháng"].dropna().unique().tolist())
     current_index = month_keys.index(selected_month)
 
@@ -406,9 +405,7 @@ def add_previous_month_comparison(ranking, monthly_data, selected_month):
 
     previous_month = month_keys[current_index - 1]
     previous_ranking = prepare_ranking_table(monthly_data, previous_month)
-
     previous_rank_map = previous_ranking.set_index("Thành viên")["Xếp hạng"].to_dict()
-    previous_average_map = previous_ranking.set_index("Thành viên")["Điểm TB/kỳ"].to_dict()
 
     comparison_text = []
     for _, row in ranking.iterrows():
@@ -418,23 +415,13 @@ def add_previous_month_comparison(ranking, monthly_data, selected_month):
             continue
 
         rank_change = previous_rank_map[member] - row["Xếp hạng"]
-        average_change = row["Điểm TB/kỳ"] - previous_average_map[member]
 
         if rank_change > 0:
-            rank_text = f"↑ {rank_change} hạng"
+            comparison_text.append(f"↑ {rank_change} hạng")
         elif rank_change < 0:
-            rank_text = f"↓ {abs(rank_change)} hạng"
+            comparison_text.append(f"↓ {abs(rank_change)} hạng")
         else:
-            rank_text = "Giữ hạng"
-
-        if average_change > 0:
-            score_text = f"+{average_change:.2f} điểm TB/kỳ"
-        elif average_change < 0:
-            score_text = f"{average_change:.2f} điểm TB/kỳ"
-        else:
-            score_text = "0 điểm TB/kỳ"
-
-        comparison_text.append(f"{rank_text}; {score_text}")
+            comparison_text.append("Giữ hạng")
 
     ranking["So với tháng trước"] = comparison_text
     return ranking, previous_month
@@ -744,7 +731,6 @@ def plot_ranking_chart(ranking):
                 alt.Tooltip("Phiếu đóng góp:Q", format=".0f"),
                 alt.Tooltip("Phiếu cảnh báo:Q", format=".0f"),
                 alt.Tooltip("Điểm xếp hạng:Q", format=".0f"),
-                alt.Tooltip("Điểm TB/kỳ:Q", format=".2f"),
             ],
         )
     )
@@ -1015,9 +1001,7 @@ try:
 
                 st.caption(
                     "**Điểm xếp hạng = tổng phiếu đóng góp (Tiêu chí 1 + 2) − "
-                    "tổng phiếu cảnh báo (Tiêu chí 3 + 4).** "
-                    "Tháng của từng kỳ được lấy trực tiếp từ sheet Cấu hình tháng. "
-                    "Điểm TB/kỳ được dùng để so sánh mức thay đổi giữa các tháng."
+                    "tổng phiếu cảnh báo (Tiêu chí 3 + 4).**"
                 )
 
                 top_members = ranking.head(3).to_dict("records")
@@ -1028,10 +1012,7 @@ try:
                         st.metric(
                             label=f"{medals[index]} Hạng {index + 1}",
                             value=member["Thành viên"],
-                            delta=(
-                                f'{member["Điểm xếp hạng"]:g} điểm | '
-                                f'{member["Điểm TB/kỳ"]:.2f} điểm/kỳ'
-                            ),
+                            delta=f'{member["Điểm xếp hạng"]:g} điểm',
                             delta_color="off",
                         )
                 else:
@@ -1043,10 +1024,7 @@ try:
                                 st.metric(
                                     label=f"{medals[index]} Hạng {index + 1}",
                                     value=member["Thành viên"],
-                                    delta=(
-                                        f'{member["Điểm xếp hạng"]:g} điểm | '
-                                        f'{member["Điểm TB/kỳ"]:.2f} điểm/kỳ'
-                                    ),
+                                    delta=f'{member["Điểm xếp hạng"]:g} điểm',
                                     delta_color="off",
                                 )
 
@@ -1062,7 +1040,6 @@ try:
                     "Phiếu cảnh báo",
                     "Điểm xếp hạng",
                     "Số kỳ",
-                    "Điểm TB/kỳ",
                     "So với tháng trước",
                 ]
                 display_ranking = ranking[display_columns].copy()
@@ -1074,10 +1051,6 @@ try:
                     "Số kỳ",
                 ]:
                     display_ranking[column] = display_ranking[column].map(format_number)
-                display_ranking["Điểm TB/kỳ"] = display_ranking["Điểm TB/kỳ"].map(
-                    lambda value: format_number(value, decimals=2)
-                )
-
                 st.dataframe(
                     display_ranking,
                     use_container_width=True,
